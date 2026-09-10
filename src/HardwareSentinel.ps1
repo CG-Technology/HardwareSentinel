@@ -24,7 +24,10 @@ param (
     [string]$Format = "Console",
 
     [Parameter(Mandatory = $false)]
-    [string]$OutputPath = ""
+    [string]$OutputPath = "",
+
+    [Parameter(Mandatory = $false)]
+    [switch]$LoadFunctionsOnly = $false
 )
 
 $ErrorActionPreference = "SilentlyContinue"
@@ -553,7 +556,7 @@ function New-SentinelHtmlReport {
 }
 
 # MAIN EXECUTION
-if ($Scan) {
+if ($Scan -and -not $LoadFunctionsOnly) {
     if ($Format -eq "Console") {
         Write-DiagnosticLog "Hardware Sentinel - Initializing Full Diagnostic Probe..." "HEADER"
     }

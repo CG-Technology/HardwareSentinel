@@ -85,3 +85,4 @@ Write-Host "PC Health Score: $($Report.HealthScore)%" -ForegroundColor Green
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 Developed with ❤️ by **[CG Technology](https://github.com/CG-Technology)**.
+

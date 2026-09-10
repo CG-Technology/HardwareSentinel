@@ -16,3 +16,4 @@ if (Test-Path $GuiScript) {
     Write-Error "Could not find Sentinel GUI script at $GuiScript"
     Pause
 }
+

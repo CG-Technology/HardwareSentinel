@@ -1,10 +1,10 @@
-﻿<#
+<#
 .SYNOPSIS
     Hardware Sentinel - Modern WPF Desktop Dashboard
 .DESCRIPTION
     Launches the Hardware Sentinel desktop interface displaying the 0-100% PC Health Score,
     storage integrity, battery wear level, processor/memory utilization, and plain-English
-    crash history.
+    crash history. Includes real-time progress indicators and responsive telemetry streaming.
 #>
 
 [CmdletBinding()]
@@ -20,12 +20,27 @@ Add-Type -AssemblyName System.Windows.Forms
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $engineScript = Join-Path $scriptDir "HardwareSentinel.ps1"
 
+# WPF Message Pump to keep UI interactive and smoothly animated
+function Do-WpfEvents {
+    $frame = New-Object System.Windows.Threading.DispatcherFrame
+    [System.Windows.Threading.Dispatcher]::CurrentDispatcher.BeginInvoke(
+        [System.Windows.Threading.DispatcherPriority]::Background,
+        [System.Windows.Threading.DispatcherOperationCallback]{
+            param($f)
+            $f.Continue = $false
+            return $null
+        },
+        $frame
+    ) | Out-Null
+    [System.Windows.Threading.Dispatcher]::PushFrame($frame)
+}
+
 [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Hardware Sentinel - PC Health &amp; Diagnostics"
-        Height="700" Width="900"
-        MinHeight="600" MinWidth="800"
+        Height="730" Width="920"
+        MinHeight="650" MinWidth="820"
         WindowStartupLocation="CenterScreen"
         Background="#0B0F19"
         Foreground="#E2E8F0"
@@ -103,14 +118,15 @@ $engineScript = Join-Path $scriptDir "HardwareSentinel.ps1"
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Header -->
-            <RowDefinition Height="Auto"/> <!-- Score Hero Card -->
-            <RowDefinition Height="*"/>    <!-- 4 Diagnostic Cards -->
-            <RowDefinition Height="Auto"/> <!-- Footer status -->
+            <RowDefinition Height="Auto"/> <!-- Row 0: Header -->
+            <RowDefinition Height="Auto"/> <!-- Row 1: Score Hero Card -->
+            <RowDefinition Height="Auto"/> <!-- Row 2: Scan Progress Bar -->
+            <RowDefinition Height="*"/>    <!-- Row 3: 4 Diagnostic Cards -->
+            <RowDefinition Height="Auto"/> <!-- Row 4: Footer status -->
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Margin="0,0,0,16">
+        <Grid Grid.Row="0" Margin="0,0,0,14">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -138,7 +154,7 @@ $engineScript = Join-Path $scriptDir "HardwareSentinel.ps1"
         </Grid>
 
         <!-- Score Hero Card -->
-        <Border Grid.Row="1" Style="{StaticResource CardBorder}" Margin="0,0,0,16">
+        <Border Grid.Row="1" Style="{StaticResource CardBorder}" Margin="0,0,0,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="100"/>
@@ -146,9 +162,9 @@ $engineScript = Join-Path $scriptDir "HardwareSentinel.ps1"
                 </Grid.ColumnDefinitions>
 
                 <!-- Health Score Dial -->
-                <Border x:Name="BorderScoreCircle" Grid.Column="0" Width="85" Height="85" CornerRadius="42.5" BorderThickness="4" BorderBrush="#10B981" Background="#0F172A">
+                <Border x:Name="BorderScoreCircle" Grid.Column="0" Width="85" Height="85" CornerRadius="42.5" BorderThickness="4" BorderBrush="#38BDF8" Background="#0F172A">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock x:Name="TxtScoreNumber" Text="--" FontSize="30" FontWeight="ExtraBold" Foreground="#10B981" HorizontalAlignment="Center" LineHeight="32"/>
+                        <TextBlock x:Name="TxtScoreNumber" Text="--" FontSize="30" FontWeight="ExtraBold" Foreground="#38BDF8" HorizontalAlignment="Center" LineHeight="32"/>
                         <TextBlock Text="HEALTH" FontSize="9" FontWeight="Bold" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,-2,0,0"/>
                     </StackPanel>
                 </Border>
@@ -157,8 +173,8 @@ $engineScript = Join-Path $scriptDir "HardwareSentinel.ps1"
                 <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock x:Name="TxtHealthGrade" Text="Analyzing PC Health..." FontSize="18" FontWeight="Bold" Foreground="#F8FAFC"/>
-                        <Border x:Name="BadgeGrade" Background="#065F46" CornerRadius="12" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="TxtGradeBadge" Text="Scanning" FontSize="11" FontWeight="Bold" Foreground="#34D399"/>
+                        <Border x:Name="BadgeGrade" Background="#0369A1" CornerRadius="12" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="TxtGradeBadge" Text="Scanning" FontSize="11" FontWeight="Bold" Foreground="#38BDF8"/>
                         </Border>
                     </StackPanel>
                     <TextBlock x:Name="TxtScoreSummary" Text="Inspecting drives, memory pressure, battery degradation, and crash history..." FontSize="13" Foreground="#94A3B8" Margin="0,4,0,6" TextWrapping="Wrap"/>
@@ -167,8 +183,27 @@ $engineScript = Join-Path $scriptDir "HardwareSentinel.ps1"
             </Grid>
         </Border>
 
+        <!-- Active Scan Progress Banner -->
+        <Border x:Name="BorderScanProgress" Grid.Row="2" Background="#111827" BorderBrush="#1F2937" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="0,0,0,6">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="TxtScanIcon" Text="⚡" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtScanStep" Text="Initializing diagnostic probes..." FontSize="12" FontWeight="SemiBold" Foreground="#38BDF8"/>
+                    </StackPanel>
+                    <TextBlock x:Name="TxtScanPercent" Text="0%" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" HorizontalAlignment="Right"/>
+                </Grid>
+                <ProgressBar x:Name="ProgressScanOverall" Grid.Row="1" Height="6" Minimum="0" Maximum="100" Value="0"
+                             Background="#1E293B" Foreground="#38BDF8" BorderThickness="0"/>
+            </Grid>
+        </Border>
+
         <!-- 4 Diagnostic Cards Grid -->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="3">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="*"/>
@@ -256,7 +291,7 @@ $engineScript = Join-Path $scriptDir "HardwareSentinel.ps1"
         </Grid>
 
         <!-- Footer -->
-        <Grid Grid.Row="3" Margin="0,16,0,0">
+        <Grid Grid.Row="4" Margin="0,14,0,0">
             <TextBlock x:Name="TxtStatusFooter" Text="Ready. Click Rescan to refresh hardware telemetry." FontSize="11" Foreground="#64748B"/>
             <TextBlock Text="CG Technology | https://cg-technology.github.io" FontSize="11" Foreground="#475569" HorizontalAlignment="Right"/>
         </Grid>
@@ -276,6 +311,13 @@ $badgeGrade         = $window.FindName("BadgeGrade")
 $txtGradeBadge      = $window.FindName("TxtGradeBadge")
 $txtScoreSummary    = $window.FindName("TxtScoreSummary")
 $txtTopObservations = $window.FindName("TxtTopObservations")
+
+# Progress Bar Elements
+$borderScanProgress  = $window.FindName("BorderScanProgress")
+$txtScanIcon         = $window.FindName("TxtScanIcon")
+$txtScanStep         = $window.FindName("TxtScanStep")
+$txtScanPercent      = $window.FindName("TxtScanPercent")
+$progressScanOverall = $window.FindName("ProgressScanOverall")
 
 $txtStorageSystemDrive = $window.FindName("TxtStorageSystemDrive")
 $progressStorage       = $window.FindName("ProgressStorage")
@@ -300,18 +342,175 @@ $btnCopySummary        = $window.FindName("BtnCopySummary")
 
 $script:lastResult = $null
 
-function Update-Dashboard($data) {
-    if (-not $data) { return }
-    $script:lastResult = $data
-
-    $score = $data.Health.Score
-    $grade = $data.Health.Grade
-
-    # Score Color
-    $brushColor = if ($score -ge 85) { "#10B981" } elseif ($score -ge 70) { "#F59E0B" } else { "#EF4444" }
-    $badgeBgColor = if ($score -ge 85) { "#065F46" } elseif ($score -ge 70) { "#78350F" } else { "#7F1D1D" }
+function Invoke-DiagnosticsScan {
+    $btnRefresh.IsEnabled     = $false
+    $btnSaveReport.IsEnabled  = $false
+    $btnCopySummary.IsEnabled = $false
 
     $bc = New-Object System.Windows.Media.BrushConverter
+
+    # Setup Progress Banner
+    $borderScanProgress.Visibility  = [System.Windows.Visibility]::Visible
+    $progressScanOverall.Value      = 5
+    $progressScanOverall.Foreground = $bc.ConvertFromString("#38BDF8")
+    $txtScanIcon.Text               = "⚡"
+    $txtScanStep.Text               = "Initializing diagnostic probes..."
+    $txtScanStep.Foreground         = $bc.ConvertFromString("#38BDF8")
+    $txtScanPercent.Text            = "5%"
+    $txtScanPercent.Foreground      = $bc.ConvertFromString("#38BDF8")
+    $txtStatusFooter.Text           = "Initializing Hardware Sentinel diagnostic engine..."
+
+    # Reset score dial to scanning state
+    $borderScoreCircle.BorderBrush  = $bc.ConvertFromString("#38BDF8")
+    $txtScoreNumber.Foreground      = $bc.ConvertFromString("#38BDF8")
+    $txtScoreNumber.Text            = "--"
+    $txtHealthGrade.Text            = "Analyzing PC Health..."
+    $txtGradeBadge.Text             = "Scanning"
+    $badgeGrade.Background          = $bc.ConvertFromString("#0369A1")
+    $txtScoreSummary.Text           = "Inspecting drives, memory pressure, battery degradation, and crash history..."
+    $txtTopObservations.Text        = ""
+
+    # Reset card previews to active scanning placeholders
+    $txtStorageSystemDrive.Text     = "C: Drive: Probing free space..."
+    $progressStorage.Value          = 0
+    $txtStorageDisks.Text           = "Physical Disks: Querying SMART telemetry..."
+
+    $txtBatteryCondition.Text       = "Power Source: Detecting battery and power supply..."
+    $progressBattery.Value          = 0
+    $txtBatteryDetails.Text         = "Reading factory design vs full charge capacity..."
+
+    $txtProcessorName.Text          = "CPU: Detecting model and active load..."
+    $txtMemoryUsage.Text            = "RAM: Probing utilization and available memory..."
+    $progressMemory.Value           = 0
+    $txtUptime.Text                 = "Uptime: Calculating system running time..."
+
+    $txtCrashSummary.Text           = "Stability: Scanning minidump directory..."
+    $txtCrashDetails.Text           = "Checking Event Log for recent BugCheck exceptions..."
+
+    Do-WpfEvents
+
+    # Ensure engine functions are loaded into memory
+    . "$engineScript" -LoadFunctionsOnly
+
+    # -------------------------------------------------------------
+    # STEP 1: Storage & Drive Health (20%)
+    # -------------------------------------------------------------
+    $progressScanOverall.Value = 20
+    $txtScanStep.Text          = "Step 1 of 5: Probing storage drives and SMART telemetry..."
+    $txtScanPercent.Text       = "20%"
+    $txtStatusFooter.Text      = "Reading physical disk health and partition space..."
+    Do-WpfEvents
+
+    $storage = Get-SentinelStorageInfo
+
+    # Update Storage Card Live!
+    $sysDrive = $storage.Volumes | Where-Object { $_.IsSystemDrive } | Select-Object -First 1
+    if ($sysDrive) {
+        $txtStorageSystemDrive.Text = "$($sysDrive.DeviceID) ($($sysDrive.VolumeName)): $($sysDrive.FreeGB) GB free of $($sysDrive.TotalGB) GB ($($sysDrive.PercentFree)% available)"
+        $progressStorage.Value = [Math]::Max(0, (100 - $sysDrive.PercentFree))
+        $progressStorage.Foreground = if ($sysDrive.PercentFree -lt 15) { $bc.ConvertFromString("#EF4444") } else { $bc.ConvertFromString("#10B981") }
+    }
+    $disksText = ($storage.PhysicalDisks | ForEach-Object { "$($_.FriendlyName) ($($_.MediaType), $($_.SizeGB) GB): $($_.HealthStatus)" }) -join " | "
+    $txtStorageDisks.Text = if ($disksText) { $disksText } else { "Physical drives reporting healthy SMART telemetry." }
+    Do-WpfEvents
+
+    # -------------------------------------------------------------
+    # STEP 2: Battery & Power Health (40%)
+    # -------------------------------------------------------------
+    $progressScanOverall.Value = 40
+    $txtScanStep.Text          = "Step 2 of 5: Querying battery degradation, cycle count, and power rails..."
+    $txtScanPercent.Text       = "40%"
+    $txtStatusFooter.Text      = "Querying Windows power management telemetry..."
+    Do-WpfEvents
+
+    $battery = Get-SentinelBatteryInfo
+
+    # Update Battery Card Live!
+    if ($battery.IsBatteryPresent) {
+        $txtBatteryCondition.Text = "Battery Health: $($battery.HealthPercent)% of factory capacity"
+        $progressBattery.Value = $battery.HealthPercent
+        $progressBattery.Foreground = if ($battery.HealthPercent -ge 75) { $bc.ConvertFromString("#10B981") } else { $bc.ConvertFromString("#F59E0B") }
+        $txtBatteryDetails.Text = "$($battery.FullChargeMWh) mWh current capacity (Design: $($battery.DesignCapacityMWh) mWh)`nDegradation: $($battery.WearLevelPercent)% wear | Cycle count: $($battery.CycleCount)"
+    } else {
+        $txtBatteryCondition.Text = "Power: Direct AC Wall Power"
+        $progressBattery.Value = 100
+        $progressBattery.Foreground = $bc.ConvertFromString("#10B981")
+        $txtBatteryDetails.Text = "Desktop PC - Zero battery degradation (Continuous wall power)."
+    }
+    Do-WpfEvents
+
+    # -------------------------------------------------------------
+    # STEP 3: Processor & Memory (60%)
+    # -------------------------------------------------------------
+    $progressScanOverall.Value = 60
+    $txtScanStep.Text          = "Step 3 of 5: Analyzing CPU load, memory utilization, and uptime..."
+    $txtScanPercent.Text       = "60%"
+    $txtStatusFooter.Text      = "Measuring CPU thread activity and memory pressure..."
+    Do-WpfEvents
+
+    $performance = Get-SentinelPerformanceInfo
+
+    # Update CPU/RAM Card Live!
+    $txtProcessorName.Text = "CPU: $($performance.ProcessorName) ($($performance.PhysicalCores) Cores, Load: $($performance.CpuLoadPercent)%)"
+    $txtMemoryUsage.Text   = "RAM: $($performance.UsedRamGB) GB used / $($performance.TotalRamGB) GB total ($($performance.FreeRamGB) GB free)"
+    $progressMemory.Value  = $performance.RamUsedPercent
+    $txtUptime.Text        = "System Uptime: $($performance.SystemUptime)"
+    $txtMachineSubtitle.Text = "Computer: $($env:COMPUTERNAME) | OS: $($performance.OperatingSystem)"
+    Do-WpfEvents
+
+    # -------------------------------------------------------------
+    # STEP 4: System Stability & Crashes (80%)
+    # -------------------------------------------------------------
+    $progressScanOverall.Value = 80
+    $txtScanStep.Text          = "Step 4 of 5: Inspecting minidumps and crash event logs..."
+    $txtScanPercent.Text       = "80%"
+    $txtStatusFooter.Text      = "Checking for blue screens and unexpected shutdowns..."
+    Do-WpfEvents
+
+    $stability = Get-SentinelStabilityInfo
+
+    # Update Stability Card Live!
+    if ($stability.CrashEvents.Count -eq 0) {
+        $txtCrashSummary.Text = "Clean Stability Record (0 crashes in 30 days)"
+        $txtCrashDetails.Text = "No blue screen crash dumps (minidumps) or fatal driver exceptions found."
+        $txtCrashDetails.Foreground = $bc.ConvertFromString("#10B981")
+    } else {
+        $txtCrashSummary.Text = "$($stability.CrashEvents.Count) Crash Event(s) Detected in Last 30 Days"
+        $details = ($stability.CrashEvents | ForEach-Object { "• $($_.Timestamp): $($_.Cause)" }) -join "`n"
+        $txtCrashDetails.Text = $details
+        $txtCrashDetails.Foreground = $bc.ConvertFromString("#F87171")
+    }
+    Do-WpfEvents
+
+    # -------------------------------------------------------------
+    # STEP 5: Composite Health Score Calculation (100%)
+    # -------------------------------------------------------------
+    $progressScanOverall.Value = 95
+    $txtScanStep.Text          = "Step 5 of 5: Calculating composite health score..."
+    $txtScanPercent.Text       = "95%"
+    $txtStatusFooter.Text      = "Weighting diagnostics and compiling health observations..."
+    Do-WpfEvents
+
+    $health = Calculate-SentinelHealthScore -Storage $storage -Battery $battery -Performance $performance -Stability $stability
+
+    # Store in memory for immediate HTML export or copying
+    $script:lastResult = @{
+        ComputerName = $env:COMPUTERNAME
+        Timestamp    = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssZ")
+        Health       = $health
+        Storage      = $storage
+        Battery      = $battery
+        Performance  = $performance
+        Stability    = $stability
+    }
+
+    # Update Score Hero Card
+    $score = $health.Score
+    $grade = $health.Grade
+
+    $brushColor   = if ($score -ge 85) { "#10B981" } elseif ($score -ge 70) { "#F59E0B" } else { "#EF4444" }
+    $badgeBgColor = if ($score -ge 85) { "#065F46" } elseif ($score -ge 70) { "#78350F" } else { "#7F1D1D" }
+
     $borderScoreCircle.BorderBrush = $bc.ConvertFromString($brushColor)
     $txtScoreNumber.Foreground     = $bc.ConvertFromString($brushColor)
     $txtScoreNumber.Text           = $score.ToString()
@@ -320,94 +519,33 @@ function Update-Dashboard($data) {
     $txtGradeBadge.Text            = if ($score -ge 85) { "Excellent" } elseif ($score -ge 70) { "Good" } else { "Action Needed" }
     $badgeGrade.Background         = $bc.ConvertFromString($badgeBgColor)
 
-    $txtMachineSubtitle.Text = "Computer: $($data.ComputerName) | OS: $($data.Performance.OperatingSystem)"
-
-    if ($data.Health.Observations.Count -eq 0) {
+    if ($health.Observations.Count -eq 0) {
         $txtScoreSummary.Text = "Your computer hardware and operating system are in top condition with zero errors detected."
         $txtTopObservations.Text = "✓ Storage healthy   ✓ Memory available   ✓ Zero blue screen crashes"
         $txtTopObservations.Foreground = $bc.ConvertFromString("#10B981")
     } else {
-        $txtScoreSummary.Text = "The diagnostic scan completed. $($data.Health.Observations.Count) item(s) recommended for review:"
-        $txtTopObservations.Text = ($data.Health.Observations -join "`n")
+        $txtScoreSummary.Text = "The diagnostic scan completed. $($health.Observations.Count) item(s) recommended for review:"
+        $txtTopObservations.Text = ($health.Observations -join "`n")
         $txtTopObservations.Foreground = $bc.ConvertFromString("#FBBF24")
     }
 
-    # Storage Card
-    $sysDrive = $data.Storage.Volumes | Where-Object { $_.IsSystemDrive } | Select-Object -First 1
-    if ($sysDrive) {
-        $txtStorageSystemDrive.Text = "$($sysDrive.DeviceID) ($($sysDrive.VolumeName)): $($sysDrive.FreeGB) GB free of $($sysDrive.TotalGB) GB ($($sysDrive.PercentFree)% available)"
-        $progressStorage.Value = [Math]::Max(0, (100 - $sysDrive.PercentFree))
-        $progressStorage.Foreground = if ($sysDrive.PercentFree -lt 15) { $bc.ConvertFromString("#EF4444") } else { $bc.ConvertFromString("#10B981") }
-    }
-    $disksText = ($data.Storage.PhysicalDisks | ForEach-Object { "$($_.FriendlyName) ($($_.MediaType), $($_.SizeGB) GB): $($_.HealthStatus)" }) -join " | "
-    $txtStorageDisks.Text = if ($disksText) { $disksText } else { "Physical drives reporting healthy SMART telemetry." }
-
-    # Battery Card
-    if ($data.Battery.IsBatteryPresent) {
-        $txtBatteryCondition.Text = "Battery Health: $($data.Battery.HealthPercent)% of factory capacity"
-        $progressBattery.Value = $data.Battery.HealthPercent
-        $progressBattery.Foreground = if ($data.Battery.HealthPercent -ge 75) { $bc.ConvertFromString("#10B981") } else { $bc.ConvertFromString("#F59E0B") }
-        $txtBatteryDetails.Text = "$($data.Battery.FullChargeMWh) mWh current capacity (Factory design: $($data.Battery.DesignCapacityMWh) mWh)`nDegradation: $($data.Battery.WearLevelPercent)% wear | Cycle count: $($data.Battery.CycleCount)"
-    } else {
-        $txtBatteryCondition.Text = "Power: Desktop Direct Wall Power (AC)"
-        $progressBattery.Value = 100
-        $progressBattery.Foreground = $bc.ConvertFromString("#10B981")
-        $txtBatteryDetails.Text = "Zero battery degradation (Standard desktop PC power supply)."
-    }
-
-    # Memory & CPU Card
-    $txtProcessorName.Text = "CPU: $($data.Performance.ProcessorName) ($($data.Performance.PhysicalCores) Cores, Load: $($data.Performance.CpuLoadPercent)%)"
-    $txtMemoryUsage.Text   = "RAM: $($data.Performance.UsedRamGB) GB used / $($data.Performance.TotalRamGB) GB total ($($data.Performance.FreeRamGB) GB free)"
-    $progressMemory.Value  = $data.Performance.RamUsedPercent
-    $txtUptime.Text        = "System Uptime: $($data.Performance.SystemUptime)"
-
-    # Stability Card
-    if ($data.Stability.CrashEvents.Count -eq 0) {
-        $txtCrashSummary.Text = "Clean Stability Record (0 crashes in 30 days)"
-        $txtCrashDetails.Text = "No blue screen crash dumps (minidumps) or fatal driver exceptions found."
-        $txtCrashDetails.Foreground = $bc.ConvertFromString("#10B981")
-    } else {
-        $txtCrashSummary.Text = "$($data.Stability.CrashEvents.Count) Crash Event(s) Detected in Last 30 Days"
-        $details = ($data.Stability.CrashEvents | ForEach-Object { "• $($_.Timestamp): $($_.Cause)" }) -join "`n"
-        $txtCrashDetails.Text = $details
-        $txtCrashDetails.Foreground = $bc.ConvertFromString("#F87171")
-    }
+    # Finalize Progress Bar
+    $progressScanOverall.Value      = 100
+    $progressScanOverall.Foreground = $bc.ConvertFromString("#10B981")
+    $txtScanIcon.Text               = "✓"
+    $txtScanStep.Text               = "Diagnostic scan complete"
+    $txtScanStep.Foreground         = $bc.ConvertFromString("#10B981")
+    $txtScanPercent.Text            = "100%"
+    $txtScanPercent.Foreground      = $bc.ConvertFromString("#10B981")
 
     $timeStr = (Get-Date).ToString("HH:mm:ss")
-    $txtStatusFooter.Text = "Diagnostics completed at $timeStr. Health Score: $score/100."
-}
+    $txtStatusFooter.Text = "Diagnostics completed at $timeStr. Health Score: $score/100 ($grade)."
 
-# Run diagnostics in background
-function Invoke-DiagnosticsScan {
-    $btnRefresh.IsEnabled = $false
-    $txtStatusFooter.Text = "Scanning hardware devices, drive SMART status, and event logs..."
+    $btnRefresh.IsEnabled     = $true
+    $btnSaveReport.IsEnabled  = $true
+    $btnCopySummary.IsEnabled = $true
 
-    $worker = [System.ComponentModel.BackgroundWorker]::new()
-    $worker.DoWork += {
-        & "$engineScript" -Scan -Format Json
-    }
-    $worker.RunWorkerCompleted += {
-        param($s, $e)
-        $btnRefresh.IsEnabled = $true
-        if ($e.Result) {
-            try {
-                $rawJson = $e.Result
-                # Filter to last JSON block if console logs appeared
-                if ($rawJson -match '(?s)(\{.*\})') {
-                    $rawJson = $Matches[1]
-                }
-                $data = $rawJson | ConvertFrom-Json
-                Update-Dashboard $data
-            } catch {
-                $txtStatusFooter.Text = "Error parsing diagnostics: $($_.Exception.Message)"
-            }
-        } else {
-            # Fallback direct call
-            $res = & "$engineScript" -Scan
-            Update-Dashboard $res
-        }
-    }
-    $worker.RunWorkerAsync()
+    Do-WpfEvents
 }
 
 $btnRefresh.Add_Click({
@@ -426,7 +564,8 @@ $btnSaveReport.Add_Click({
 
     if ($sfd.ShowDialog($window) -eq $true) {
         $outPath = $sfd.FileName
-        & "$engineScript" -Scan -Format Html -OutputPath "$outPath"
+        . "$engineScript" -LoadFunctionsOnly
+        New-SentinelHtmlReport -Result $script:lastResult -FilePath $outPath | Out-Null
         [System.Windows.MessageBox]::Show("Health Report successfully saved to:`n$outPath", "Report Generated", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
         Start-Process "explorer.exe" -ArgumentList "/select,`"$outPath`""
     }
@@ -452,8 +591,8 @@ Report Generated: $($d.Timestamp)
     $txtStatusFooter.Text = "Summary copied to clipboard!"
 })
 
-# Initial Scan on load
-$window.Add_Loaded({
+# Initial Scan on window load
+$window.Add_ContentRendered({
     Invoke-DiagnosticsScan
 })
 
