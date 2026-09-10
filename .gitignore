@@ -1,0 +1,13 @@
+# Ignore reports and temporary outputs
+output/
+*.html
+*.xml
+*.tmp
+*.log
+*.zip
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
