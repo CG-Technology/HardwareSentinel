@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Hardware Sentinel - Disk Space Tree Analyzer (TreeSize-Style)
+    Hardware Sentinel - Disk Space Tree Analyzer
 .DESCRIPTION
     Interactive disk space visualizer with hierarchical folder tree exploration (lazy-loaded),
     size distribution indicators, and largest single files finder.
@@ -239,6 +239,89 @@ function Get-FolderSizeFast {
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <!-- High-Contrast Dark ComboBox Styles -->
+        <Style x:Key="DarkComboBoxToggle" TargetType="ToggleButton">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="22"/>
+                                </Grid.ColumnDefinitions>
+                                <Path Grid.Column="1" Data="M7 10l5 5 5-5z" Fill="#94A3B8" Width="9" Height="9" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#F8FAFC"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Style="{StaticResource DarkComboBoxToggle}"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press"/>
+                            <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"
+                                              Margin="10,0,22,0"
+                                              IsHitTestVisible="False"/>
+                            <Popup Name="Popup" Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Slide">
+                                <Border Background="#111827" BorderBrush="#334155" BorderThickness="1" CornerRadius="6" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="160" Padding="2">
+                                    <ScrollViewer SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="#F8FAFC"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="itemBorder" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="itemBorder" Property="Background" Value="#0284C7"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="itemBorder" Property="Background" Value="#0369A1"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="18">
@@ -270,7 +353,7 @@ function Get-FolderSizeFast {
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="Disk Space Tree Analyzer" FontSize="18" FontWeight="Bold" Foreground="#F8FAFC"/>
                             <Border Background="#1E293B" CornerRadius="8" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="TreeSize View" FontSize="10" FontWeight="Bold" Foreground="#38BDF8"/>
+                                <TextBlock Text="Disk Visualizer" FontSize="10" FontWeight="Bold" Foreground="#38BDF8"/>
                             </Border>
                         </StackPanel>
                         <TextBlock x:Name="TxtDriveSubtitle" Text="Select a drive or folder to explore directory sizes and large files" FontSize="11.5" Foreground="#94A3B8"/>
@@ -280,7 +363,7 @@ function Get-FolderSizeFast {
                 <!-- Drive Selection & Actions -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Drive:" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <ComboBox x:Name="ComboDrives" Width="90" Height="28" Background="#1E293B" Foreground="#F8FAFC" BorderBrush="#334155" FontSize="12" FontWeight="SemiBold" VerticalContentAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox x:Name="ComboDrives" Style="{StaticResource DarkComboBox}" Width="90" Height="28" Margin="0,0,10,0"/>
                     <Button x:Name="BtnRescanDrive" Style="{StaticResource ActionButton}" Content="Rescan Drive" Margin="0,0,6,0"/>
                 </StackPanel>
             </Grid>

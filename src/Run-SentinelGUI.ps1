@@ -213,7 +213,7 @@ function Do-WpfEvents {
             </Grid.ColumnDefinitions>
 
             <!-- Card 1: Storage & Drives -->
-            <Border x:Name="CardStorage" Grid.Row="0" Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,8,8" Cursor="Hand" ToolTip="Click to open TreeSize Disk Space Analyzer">
+            <Border x:Name="CardStorage" Grid.Row="0" Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,8,8" Cursor="Hand" ToolTip="Click to open Disk Space Visualizer">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -237,7 +237,7 @@ function Do-WpfEvents {
                         <TextBlock x:Name="TxtStorageDisks" Text="Physical Disks: Probing SMART..." FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,0,0,6"/>
                         
                         <!-- Top Space Consumers on C: -->
-                        <Border x:Name="BorderStorageTopConsumers" Background="#161E2E" CornerRadius="6" Padding="8,6" Margin="0,2,0,0" Cursor="Hand" ToolTip="Click to open TreeSize Disk Space Analyzer">
+                        <Border x:Name="BorderStorageTopConsumers" Background="#161E2E" CornerRadius="6" Padding="8,6" Margin="0,2,0,0" Cursor="Hand" ToolTip="Click to open Disk Space Visualizer">
                             <StackPanel>
                                 <Grid Margin="0,0,0,2">
                                     <TextBlock Text="Largest Space Consumers on C:" FontSize="10.5" FontWeight="Bold" Foreground="#38BDF8" VerticalAlignment="Center"/>
@@ -658,7 +658,7 @@ Report Generated: $($d.Timestamp)
     $txtStatusFooter.Text = "Summary copied to clipboard!"
 })
 
-# Open TreeSize-style Disk Space Analyzer
+# Open Disk Space Visualizer
 $openDiskTreeAction = {
     $diskTreeScript = Join-Path $scriptDir "Show-SentinelDiskTree.ps1"
     if (Test-Path $diskTreeScript) {
