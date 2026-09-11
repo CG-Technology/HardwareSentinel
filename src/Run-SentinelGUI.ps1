@@ -121,8 +121,9 @@ function Do-WpfEvents {
             <RowDefinition Height="Auto"/> <!-- Row 0: Header -->
             <RowDefinition Height="Auto"/> <!-- Row 1: Score Hero Card -->
             <RowDefinition Height="Auto"/> <!-- Row 2: Scan Progress Bar -->
-            <RowDefinition Height="*"/>    <!-- Row 3: 4 Diagnostic Cards -->
-            <RowDefinition Height="Auto"/> <!-- Row 4: Footer status -->
+            <RowDefinition Height="Auto"/> <!-- Row 3: Quick System Utilities Bar -->
+            <RowDefinition Height="*"/>    <!-- Row 4: 4 Diagnostic Cards -->
+            <RowDefinition Height="Auto"/> <!-- Row 5: Footer status -->
         </Grid.RowDefinitions>
 
         <!-- Header -->
@@ -139,7 +140,7 @@ function Do-WpfEvents {
                     </Border>
                     <TextBlock Text="Hardware Sentinel" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
                     <Border Background="#065F46" CornerRadius="10" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="v1.0.3" FontSize="11" FontWeight="Bold" Foreground="#34D399"/>
+                        <TextBlock Text="v1.1.0" FontSize="11" FontWeight="Bold" Foreground="#34D399"/>
                     </Border>
                 </StackPanel>
                 <TextBlock x:Name="TxtMachineSubtitle" Text="Computer: Checking... | OS: Windows" FontSize="12" Foreground="#94A3B8" Margin="42,4,0,0"/>
@@ -176,6 +177,9 @@ function Do-WpfEvents {
                         <Border x:Name="BadgeGrade" Background="#0369A1" CornerRadius="12" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
                             <TextBlock x:Name="TxtGradeBadge" Text="Scanning" FontSize="11" FontWeight="Bold" Foreground="#38BDF8"/>
                         </Border>
+                        <Border x:Name="BadgeTrend" Background="#1E293B" CornerRadius="12" Padding="8,2" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                            <TextBlock x:Name="TxtScoreTrend" Text="" FontSize="11" FontWeight="Bold" Foreground="#38BDF8"/>
+                        </Border>
                     </StackPanel>
                     <TextBlock x:Name="TxtScoreSummary" Text="Inspecting drives, memory pressure, battery degradation, and crash history..." FontSize="13" Foreground="#94A3B8" Margin="0,4,0,6" TextWrapping="Wrap"/>
                     <TextBlock x:Name="TxtTopObservations" Text="" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap"/>
@@ -184,7 +188,7 @@ function Do-WpfEvents {
         </Border>
 
         <!-- Active Scan Progress Banner -->
-        <Border x:Name="BorderScanProgress" Grid.Row="2" Background="#111827" BorderBrush="#1F2937" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,12">
+        <Border x:Name="BorderScanProgress" Grid.Row="2" Background="#111827" BorderBrush="#1F2937" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,10">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -201,8 +205,35 @@ function Do-WpfEvents {
             </Grid>
         </Border>
 
+        <!-- Quick System Utilities Action Bar -->
+        <Border Grid.Row="3" Background="#0F172A" BorderBrush="#1E293B" BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="System Utilities:" FontSize="11" FontWeight="Bold" Foreground="#64748B" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="BtnToolReliability" Style="{StaticResource ActionButton}" Margin="0,0,6,0" Padding="8,3" FontSize="11" ToolTip="Open Windows Reliability Monitor (perfmon /rel)">
+                        <TextBlock Text="Stability Timeline" Foreground="#38BDF8" FontWeight="SemiBold"/>
+                    </Button>
+                    <Button x:Name="BtnToolStorageSense" Style="{StaticResource ActionButton}" Margin="0,0,6,0" Padding="8,3" FontSize="11" ToolTip="Open Windows Storage Sense or Disk Cleanup">
+                        <TextBlock Text="Storage Sense" Foreground="#38BDF8" FontWeight="SemiBold"/>
+                    </Button>
+                    <Button x:Name="BtnToolResMon" Style="{StaticResource ActionButton}" Margin="0,0,6,0" Padding="8,3" FontSize="11" ToolTip="Open Windows Resource Monitor (resmon.exe)">
+                        <TextBlock Text="Resource Monitor" Foreground="#38BDF8" FontWeight="SemiBold"/>
+                    </Button>
+                    <Button x:Name="BtnToolTaskMgr" Style="{StaticResource ActionButton}" Margin="0,0,6,0" Padding="8,3" FontSize="11" ToolTip="Open Windows Task Manager (taskmgr.exe)">
+                        <TextBlock Text="Task Manager" Foreground="#38BDF8" FontWeight="SemiBold"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
         <!-- 4 Diagnostic Cards Grid -->
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="4">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="*"/>
@@ -232,9 +263,14 @@ function Do-WpfEvents {
                         </Button>
                     </Grid>
                     <StackPanel Grid.Row="1">
-                        <TextBlock x:Name="TxtStorageSystemDrive" Text="C: Drive: Checking space..." FontSize="12" Foreground="#CBD5E1"/>
+                        <Grid Margin="0,0,0,2">
+                            <TextBlock x:Name="TxtStorageSystemDrive" Text="C: Drive: Checking space..." FontSize="12" Foreground="#CBD5E1"/>
+                            <Border x:Name="BadgeBitLocker" Background="#1E293B" CornerRadius="6" Padding="6,1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <TextBlock x:Name="TxtBitLockerBadge" Text="BitLocker: Checking..." FontSize="10" FontWeight="Bold" Foreground="#94A3B8"/>
+                            </Border>
+                        </Grid>
                         <ProgressBar x:Name="ProgressStorage" Height="7" Margin="0,5,0,5" Value="0" Maximum="100" Background="#1E293B" Foreground="#10B981" BorderThickness="0"/>
-                        <TextBlock x:Name="TxtStorageDisks" Text="Physical Disks: Probing SMART..." FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                        <TextBlock x:Name="TxtStorageDisks" Text="Physical Disks: Probing SMART &amp; Media..." FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,0,0,6"/>
                         
                         <!-- Top Space Consumers on C: -->
                         <Border x:Name="BorderStorageTopConsumers" Background="#161E2E" CornerRadius="6" Padding="8,6" Margin="0,2,0,0" Cursor="Hand" ToolTip="Click to open Disk Space Visualizer">
@@ -281,8 +317,14 @@ function Do-WpfEvents {
                         <TextBlock Text="Processor &amp; Memory" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
                     </StackPanel>
                     <StackPanel Grid.Row="1">
-                        <TextBlock x:Name="TxtProcessorName" Text="CPU: Detecting..." FontSize="12" Foreground="#CBD5E1"/>
-                        <TextBlock x:Name="TxtTopCpu" Text="Active CPU: Analyzing threads..." FontSize="10.5" Foreground="#38BDF8" Margin="0,2,0,4" TextWrapping="Wrap"/>
+                        <Grid Margin="0,0,0,2">
+                            <TextBlock x:Name="TxtProcessorName" Text="CPU: Detecting..." FontSize="12" Foreground="#CBD5E1"/>
+                            <Border x:Name="BadgeRebootPending" Background="#78350F" CornerRadius="6" Padding="6,1" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed">
+                                <TextBlock Text="Reboot Required" FontSize="10" FontWeight="Bold" Foreground="#FBBF24"/>
+                            </Border>
+                        </Grid>
+                        <TextBlock x:Name="TxtGpuName" Text="GPU: Detecting..." FontSize="11" Foreground="#94A3B8" Margin="0,0,0,3"/>
+                        <TextBlock x:Name="TxtTopCpu" Text="Active CPU: Analyzing threads..." FontSize="10.5" Foreground="#38BDF8" Margin="0,0,0,4" TextWrapping="Wrap"/>
                         <TextBlock x:Name="TxtMemoryUsage" Text="RAM: Probing utilization..." FontSize="12" Foreground="#CBD5E1"/>
                         <ProgressBar x:Name="ProgressMemory" Height="7" Margin="0,5,0,4" Value="0" Maximum="100" Background="#1E293B" Foreground="#6366F1" BorderThickness="0"/>
                         <TextBlock x:Name="TxtTopMemory" Text="Top RAM: Analyzing memory..." FontSize="10.5" Foreground="#A78BFA" Margin="0,0,0,4" TextWrapping="Wrap"/>
@@ -298,20 +340,32 @@ function Do-WpfEvents {
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
-                        <Path Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" Fill="#F87171" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Stability &amp; Crash History" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
-                    </StackPanel>
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" Fill="#F87171" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Stability &amp; Crash History" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button x:Name="BtnCardReliability" Style="{StaticResource ActionButton}" HorizontalAlignment="Right" Padding="8,2" FontSize="11" ToolTip="Open Windows Reliability Monitor">
+                            <TextBlock Text="View Timeline" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold"/>
+                        </Button>
+                    </Grid>
                     <StackPanel Grid.Row="1">
                         <TextBlock x:Name="TxtCrashSummary" Text="Checking for blue screens in the last 30 days..." FontSize="12" Foreground="#CBD5E1"/>
-                        <TextBlock x:Name="TxtCrashDetails" Text="No crashes recorded." FontSize="11" Foreground="#94A3B8" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="TxtCrashDetails" Text="No crashes recorded." FontSize="11" Foreground="#94A3B8" Margin="0,4,0,6" TextWrapping="Wrap"/>
+                        <!-- Security Baseline Badges -->
+                        <Border Background="#161E2E" CornerRadius="6" Padding="8,5" Margin="0,2,0,0">
+                            <Grid>
+                                <TextBlock x:Name="TxtSecurityTpm" Text="TPM 2.0: Checking..." FontSize="10.5" Foreground="#94A3B8"/>
+                                <TextBlock x:Name="TxtSecuritySecureBoot" Text="Secure Boot: Checking..." FontSize="10.5" Foreground="#94A3B8" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Grid>
             </Border>
         </Grid>
 
         <!-- Footer -->
-        <Grid Grid.Row="4" Margin="0,14,0,0">
+        <Grid Grid.Row="5" Margin="0,14,0,0">
             <TextBlock x:Name="TxtStatusFooter" Text="Ready. Click Rescan to refresh hardware telemetry." FontSize="11" Foreground="#64748B"/>
             <TextBlock Text="CG Technology | https://cg-technology.github.io" FontSize="11" Foreground="#475569" HorizontalAlignment="Right"/>
         </Grid>
@@ -329,6 +383,8 @@ $txtScoreNumber     = $window.FindName("TxtScoreNumber")
 $txtHealthGrade     = $window.FindName("TxtHealthGrade")
 $badgeGrade         = $window.FindName("BadgeGrade")
 $txtGradeBadge      = $window.FindName("TxtGradeBadge")
+$badgeTrend         = $window.FindName("BadgeTrend")
+$txtScoreTrend      = $window.FindName("TxtScoreTrend")
 $txtScoreSummary    = $window.FindName("TxtScoreSummary")
 $txtTopObservations = $window.FindName("TxtTopObservations")
 
@@ -338,12 +394,20 @@ $txtScanStep         = $window.FindName("TxtScanStep")
 $txtScanPercent      = $window.FindName("TxtScanPercent")
 $progressScanOverall = $window.FindName("ProgressScanOverall")
 
-$txtStorageSystemDrive   = $window.FindName("TxtStorageSystemDrive")
-$progressStorage         = $window.FindName("ProgressStorage")
-$txtStorageDisks         = $window.FindName("TxtStorageDisks")
-$txtStorageTopConsumers  = $window.FindName("TxtStorageTopConsumers")
-$cardStorage             = $window.FindName("CardStorage")
-$btnOpenDiskTree         = $window.FindName("BtnOpenDiskTree")
+# Quick Tools Bar
+$btnToolReliability  = $window.FindName("BtnToolReliability")
+$btnToolStorageSense = $window.FindName("BtnToolStorageSense")
+$btnToolResMon       = $window.FindName("BtnToolResMon")
+$btnToolTaskMgr      = $window.FindName("BtnToolTaskMgr")
+
+$txtStorageSystemDrive     = $window.FindName("TxtStorageSystemDrive")
+$badgeBitLocker            = $window.FindName("BadgeBitLocker")
+$txtBitLockerBadge         = $window.FindName("TxtBitLockerBadge")
+$progressStorage           = $window.FindName("ProgressStorage")
+$txtStorageDisks           = $window.FindName("TxtStorageDisks")
+$txtStorageTopConsumers    = $window.FindName("TxtStorageTopConsumers")
+$cardStorage               = $window.FindName("CardStorage")
+$btnOpenDiskTree           = $window.FindName("BtnOpenDiskTree")
 $borderStorageTopConsumers = $window.FindName("BorderStorageTopConsumers")
 
 $txtBatteryCondition   = $window.FindName("TxtBatteryCondition")
@@ -351,14 +415,19 @@ $progressBattery       = $window.FindName("ProgressBattery")
 $txtBatteryDetails     = $window.FindName("TxtBatteryDetails")
 
 $txtProcessorName      = $window.FindName("TxtProcessorName")
+$badgeRebootPending    = $window.FindName("BadgeRebootPending")
+$txtGpuName            = $window.FindName("TxtGpuName")
 $txtTopCpu             = $window.FindName("TxtTopCpu")
 $txtMemoryUsage        = $window.FindName("TxtMemoryUsage")
 $progressMemory        = $window.FindName("ProgressMemory")
 $txtTopMemory          = $window.FindName("TxtTopMemory")
 $txtUptime             = $window.FindName("TxtUptime")
 
+$btnCardReliability    = $window.FindName("BtnCardReliability")
 $txtCrashSummary       = $window.FindName("TxtCrashSummary")
 $txtCrashDetails       = $window.FindName("TxtCrashDetails")
+$txtSecurityTpm        = $window.FindName("TxtSecurityTpm")
+$txtSecuritySecureBoot = $window.FindName("TxtSecuritySecureBoot")
 $txtStatusFooter       = $window.FindName("TxtStatusFooter")
 
 $btnRefresh            = $window.FindName("BtnRefresh")
@@ -436,6 +505,20 @@ function Invoke-DiagnosticsScan {
         $txtStorageSystemDrive.Text = "$($sysDrive.DeviceID) ($($sysDrive.VolumeName)): $($sysDrive.FreeGB) GB free of $($sysDrive.TotalGB) GB ($($sysDrive.PercentFree)% available)"
         $progressStorage.Value = [Math]::Max(0, (100 - $sysDrive.PercentFree))
         $progressStorage.Foreground = if ($sysDrive.PercentFree -lt 15) { $bc.ConvertFromString("#EF4444") } else { $bc.ConvertFromString("#10B981") }
+
+        if ($sysDrive.BitLocker) {
+            $txtBitLockerBadge.Text = "BitLocker: $($sysDrive.BitLocker)"
+            if ($sysDrive.BitLocker -like "*Encrypted*") {
+                $txtBitLockerBadge.Foreground = $bc.ConvertFromString("#34D399")
+                $badgeBitLocker.Background = $bc.ConvertFromString("#064E3B")
+            } elseif ($sysDrive.BitLocker -eq "Requires Admin") {
+                $txtBitLockerBadge.Foreground = $bc.ConvertFromString("#94A3B8")
+                $badgeBitLocker.Background = $bc.ConvertFromString("#1E293B")
+            } else {
+                $txtBitLockerBadge.Foreground = $bc.ConvertFromString("#F87171")
+                $badgeBitLocker.Background = $bc.ConvertFromString("#7F1D1D")
+            }
+        }
     }
     $disksText = ($storage.PhysicalDisks | ForEach-Object { "$($_.FriendlyName) ($($_.MediaType), $($_.SizeGB) GB): $($_.HealthStatus)" }) -join " | "
     $txtStorageDisks.Text = if ($disksText) { $disksText } else { "Physical drives reporting healthy SMART telemetry." }
@@ -486,6 +569,13 @@ function Invoke-DiagnosticsScan {
 
     # Update CPU/RAM Card Live!
     $txtProcessorName.Text = "CPU: $($performance.ProcessorName) ($($performance.PhysicalCores) Cores, Load: $($performance.CpuLoadPercent)%)"
+    if ($performance.PrimaryGpu) {
+        $g = $performance.PrimaryGpu
+        $txtGpuName.Text = "GPU: $($g.Name) ($($g.VramGB) GB VRAM - Driver: $($g.DriverDate))"
+    } else {
+        $txtGpuName.Text = "GPU: Standard Display Adapter"
+    }
+
     if ($performance.TopCpuProcesses -and $performance.TopCpuProcesses.Count -gt 0) {
         $topCpuStr = ($performance.TopCpuProcesses | ForEach-Object { "$($_.Name) ($($_.Display))" }) -join "   |   "
         $txtTopCpu.Text = "Active CPU: $topCpuStr"
@@ -493,7 +583,7 @@ function Invoke-DiagnosticsScan {
         $txtTopCpu.Text = "Active CPU: Idle (No high-usage processes)"
     }
 
-    $txtMemoryUsage.Text   = "RAM: $($performance.UsedRamGB) GB used / $($performance.TotalRamGB) GB total ($($performance.FreeRamGB) GB free)"
+    $txtMemoryUsage.Text   = "RAM: $($performance.UsedRamGB) GB used / $($performance.TotalRamGB) GB total ($($performance.RamDetails))"
     $progressMemory.Value  = $performance.RamUsedPercent
     if ($performance.TopMemoryProcesses -and $performance.TopMemoryProcesses.Count -gt 0) {
         $topMemStr = ($performance.TopMemoryProcesses | ForEach-Object { "$($_.Name) ($($_.Display))" }) -join "   |   "
@@ -516,6 +606,16 @@ function Invoke-DiagnosticsScan {
     Do-WpfEvents
 
     $stability = Get-SentinelStabilityInfo
+    $security  = Get-SentinelSecurityInfo
+
+    # Update Reboot badge & Security indicators
+    if ($security.RebootPending) {
+        $badgeRebootPending.Visibility = [System.Windows.Visibility]::Visible
+    } else {
+        $badgeRebootPending.Visibility = [System.Windows.Visibility]::Collapsed
+    }
+    $txtSecurityTpm.Text = "TPM: $($security.TpmStatus)"
+    $txtSecuritySecureBoot.Text = "Boot: $($security.SecureBootStatus)"
 
     # Update Stability Card Live!
     if ($stability.CrashEvents.Count -eq 0) {
@@ -539,7 +639,8 @@ function Invoke-DiagnosticsScan {
     $txtStatusFooter.Text      = "Weighting diagnostics and compiling health observations..."
     Do-WpfEvents
 
-    $health = Calculate-SentinelHealthScore -Storage $storage -Battery $battery -Performance $performance -Stability $stability
+    $trend = Get-SentinelScoreTrend
+    $health = Calculate-SentinelHealthScore -Storage $storage -Battery $battery -Performance $performance -Stability $stability -Security $security
 
     # Store in memory for immediate HTML export or copying
     $script:lastResult = @{
@@ -550,7 +651,12 @@ function Invoke-DiagnosticsScan {
         Battery      = $battery
         Performance  = $performance
         Stability    = $stability
+        Security     = $security
+        Trend        = $trend
     }
+
+    # Save to history
+    Save-SentinelHistory -Result $script:lastResult
 
     # Update Score Hero Card
     $score = $health.Score
@@ -566,6 +672,27 @@ function Invoke-DiagnosticsScan {
     $txtHealthGrade.Text           = $grade
     $txtGradeBadge.Text            = if ($score -ge 85) { "Excellent" } elseif ($score -ge 70) { "Good" } else { "Action Needed" }
     $badgeGrade.Background         = $bc.ConvertFromString($badgeBgColor)
+
+    # Trend Indicator
+    if ($trend) {
+        $badgeTrend.Visibility = [System.Windows.Visibility]::Visible
+        $diff = $score - $trend.HealthScore
+        if ($diff -gt 0) {
+            $txtScoreTrend.Text = "+$diff% vs prior"
+            $txtScoreTrend.Foreground = $bc.ConvertFromString("#34D399")
+            $badgeTrend.Background = $bc.ConvertFromString("#064E3B")
+        } elseif ($diff -lt 0) {
+            $txtScoreTrend.Text = "$diff% vs prior"
+            $txtScoreTrend.Foreground = $bc.ConvertFromString("#F87171")
+            $badgeTrend.Background = $bc.ConvertFromString("#7F1D1D")
+        } else {
+            $txtScoreTrend.Text = "Unchanged vs prior"
+            $txtScoreTrend.Foreground = $bc.ConvertFromString("#38BDF8")
+            $badgeTrend.Background = $bc.ConvertFromString("#0C4A6E")
+        }
+    } else {
+        $badgeTrend.Visibility = [System.Windows.Visibility]::Collapsed
+    }
 
     if ($health.Observations.Count -eq 0) {
         $txtScoreSummary.Text = "Your computer hardware and operating system are in top condition with zero errors detected."
@@ -671,6 +798,41 @@ $openDiskTreeAction = {
 
 if ($btnOpenDiskTree) {
     $btnOpenDiskTree.Add_Click($openDiskTreeAction)
+}
+
+# Quick System Utilities Handlers
+if ($btnToolReliability) {
+    $btnToolReliability.Add_Click({
+        Start-Process "perfmon.exe" -ArgumentList "/rel"
+    })
+}
+
+if ($btnCardReliability) {
+    $btnCardReliability.Add_Click({
+        Start-Process "perfmon.exe" -ArgumentList "/rel"
+    })
+}
+
+if ($btnToolStorageSense) {
+    $btnToolStorageSense.Add_Click({
+        try {
+            Start-Process "ms-settings:storagesense"
+        } catch {
+            Start-Process "cleanmgr.exe"
+        }
+    })
+}
+
+if ($btnToolResMon) {
+    $btnToolResMon.Add_Click({
+        Start-Process "resmon.exe"
+    })
+}
+
+if ($btnToolTaskMgr) {
+    $btnToolTaskMgr.Add_Click({
+        Start-Process "taskmgr.exe"
+    })
 }
 
 if ($cardStorage) {

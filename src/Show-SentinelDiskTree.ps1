@@ -400,11 +400,18 @@ function Get-FolderSizeFast {
 
                     <Border Grid.Row="0" Background="#111827" BorderBrush="#1F2937" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,6">
                         <Grid>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                 <Path Data="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" Fill="#FBBF24" Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Expand folders (+) to navigate and calculate child sizes. Sorted by size descending." FontSize="11" Foreground="#94A3B8"/>
+                                <TextBlock Text="Expand folders (+) to calculate child sizes." FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="Filter:" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBox x:Name="TxtTreeFilter" Width="160" Height="24" Background="#1E293B" Foreground="#F8FAFC" BorderBrush="#334155" FontSize="11" VerticalContentAlignment="Center" Padding="4,0" ToolTip="Type folder name to filter current view"/>
+                                <Button x:Name="BtnClearTreeFilter" Style="{StaticResource ActionButton}" Content="Clear" Margin="4,0,0,0" Padding="6,2" FontSize="10"/>
                             </StackPanel>
-                            <TextBlock x:Name="TxtTreeScanStatus" Text="Ready" FontSize="11" Foreground="#38BDF8" HorizontalAlignment="Right"/>
+                            <TextBlock x:Name="TxtTreeScanStatus" Grid.Column="1" Text="Ready" FontSize="11" Foreground="#38BDF8" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         </Grid>
                     </Border>
 
@@ -439,6 +446,14 @@ function Get-FolderSizeFast {
 
                     <!-- Largest Files Grid -->
                     <ListView x:Name="ListLargestFiles" Grid.Row="1">
+                        <ListView.ContextMenu>
+                            <ContextMenu Background="#111827" BorderBrush="#334155">
+                                <MenuItem x:Name="MenuContextExplorer" Header="Open in Explorer" Foreground="#F8FAFC"/>
+                                <MenuItem x:Name="MenuContextCopy" Header="Copy Full Path" Foreground="#F8FAFC"/>
+                                <Separator Background="#1F2937"/>
+                                <MenuItem x:Name="MenuContextRecycle" Header="Move to Recycle Bin" Foreground="#F87171"/>
+                            </ContextMenu>
+                        </ListView.ContextMenu>
                         <ListView.View>
                             <GridView>
                                 <GridViewColumn Header="  Rank  " Width="55" DisplayMemberBinding="{Binding Rank}"/>
@@ -467,6 +482,7 @@ function Get-FolderSizeFast {
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="BtnRecycleItem" Style="{StaticResource ActionButton}" Content="Move to Recycle Bin" Margin="0,0,8,0" Foreground="#F87171" ToolTip="Safely move selected item to Windows Recycle Bin"/>
                     <Button x:Name="BtnOpenInExplorer" Style="{StaticResource PrimaryButton}" Content="Open in Explorer" Margin="0,0,8,0"/>
                     <Button x:Name="BtnCopyPath" Style="{StaticResource ActionButton}" Content="Copy Path"/>
                 </StackPanel>
@@ -502,6 +518,12 @@ $btnFilterSystem       = $window.FindName("BtnFilterSystem")
 $txtSelectedPath       = $window.FindName("TxtSelectedPath")
 $btnOpenInExplorer     = $window.FindName("BtnOpenInExplorer")
 $btnCopyPath           = $window.FindName("BtnCopyPath")
+$btnRecycleItem        = $window.FindName("BtnRecycleItem")
+$txtTreeFilter         = $window.FindName("TxtTreeFilter")
+$btnClearTreeFilter    = $window.FindName("BtnClearTreeFilter")
+$menuContextExplorer   = $window.FindName("MenuContextExplorer")
+$menuContextCopy       = $window.FindName("MenuContextCopy")
+$menuContextRecycle    = $window.FindName("MenuContextRecycle")
 
 $script:currentDriveRoot = "C:\"
 $script:allLargestFiles  = @()
@@ -892,6 +914,89 @@ $btnCopyPath.Add_Click({
         $btnCopyPath.Content = "Copy Path"
     }
 })
+
+# Move to Recycle Bin Handler
+$recycleAction = {
+    $target = $txtSelectedPath.Text
+    if ([string]::IsNullOrWhiteSpace($target) -or -not (Test-Path -LiteralPath $target)) {
+        [System.Windows.MessageBox]::Show("Please select a valid file or folder to recycle.", "Hardware Sentinel", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+        return
+    }
+
+    try {
+        Add-Type -AssemblyName Microsoft.VisualBasic
+        if ([System.IO.File]::Exists($target)) {
+            [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile(
+                $target,
+                [Microsoft.VisualBasic.FileIO.UIOption]::AllDialogs,
+                [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin
+            )
+            if (-not (Test-Path -LiteralPath $target)) {
+                $script:allLargestFiles = @($script:allLargestFiles | Where-Object { $_.FullPath -ne $target })
+                Apply-LargestFilesFilter -Filter $script:currentFilter
+                $txtSelectedPath.Text = "Item moved to Recycle Bin: $target"
+            }
+        } elseif ([System.IO.Directory]::Exists($target)) {
+            [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory(
+                $target,
+                [Microsoft.VisualBasic.FileIO.UIOption]::AllDialogs,
+                [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin
+            )
+            if (-not (Test-Path -LiteralPath $target)) {
+                $txtSelectedPath.Text = "Folder moved to Recycle Bin: $target"
+            }
+        }
+    } catch {
+        [System.Windows.MessageBox]::Show("Could not recycle item:`n$($_.Exception.Message)", "Hardware Sentinel", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+    }
+}
+
+if ($btnRecycleItem) {
+    $btnRecycleItem.Add_Click($recycleAction)
+}
+
+if ($menuContextRecycle) {
+    $menuContextRecycle.Add_Click($recycleAction)
+}
+
+if ($menuContextExplorer) {
+    $menuContextExplorer.Add_Click({
+        $target = $txtSelectedPath.Text
+        if (-not [string]::IsNullOrWhiteSpace($target) -and (Test-Path -LiteralPath $target)) {
+            Start-Process explorer.exe -ArgumentList "/select,`"$target`""
+        }
+    })
+}
+
+if ($menuContextCopy) {
+    $menuContextCopy.Add_Click({
+        $target = $txtSelectedPath.Text
+        if (-not [string]::IsNullOrWhiteSpace($target)) {
+            [System.Windows.Forms.Clipboard]::SetText($target)
+        }
+    })
+}
+
+# Tree Filter Handler
+if ($txtTreeFilter) {
+    $txtTreeFilter.Add_TextChanged({
+        $q = $txtTreeFilter.Text.Trim()
+        foreach ($node in $treeFolderView.Items) {
+            if (-not [string]::IsNullOrWhiteSpace($q)) {
+                $match = ($node.Header.ToolTip -like "*$q*") -or ($node.Tag -like "*$q*")
+                $node.Visibility = if ($match) { [System.Windows.Visibility]::Visible } else { [System.Windows.Visibility]::Collapsed }
+            } else {
+                $node.Visibility = [System.Windows.Visibility]::Visible
+            }
+        }
+    })
+}
+
+if ($btnClearTreeFilter) {
+    $btnClearTreeFilter.Add_Click({
+        $txtTreeFilter.Text = ""
+    })
+}
 
 $btnRescanDrive.Add_Click({
     Load-DriveTelemetry -DriveLetter $script:currentDriveRoot

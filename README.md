@@ -12,10 +12,20 @@
 
 ## ⚡ Key Highlights
 
-- **🎯 0–100% PC Health Score**: An intelligent composite score weighted across Drive Health & Space (35%), Stability & Blue Screens (25%), Battery & Power (20%), and CPU/RAM Load (20%).
-- **💽 Deep Storage & Space Analysis**: Reads SMART drive status, physical bus type (NVMe, SSD, HDD), volume capacity, and remaining free space. Identifies the **largest space consumers on C:** (User Accounts, Downloads, Temp files, Program Files, and Virtual Memory pagefiles).
-- **🌲 Interactive Disk Space Visualizer**: Click into the Storage section to launch an interactive, hierarchical disk visualizer with lazy-loaded folder navigation, size percentage bars, and a **Largest Files Finder** (files >= 50MB) with one-click "Open in File Explorer".
-- **🧠 Active Process & Memory Breakdown**: Shows the **top memory-consuming applications (RAM)** and **active CPU threads** in real time, so you always know what program is slowing down your PC.
+- **🎯 0–100% PC Health Score & Trend Tracking**: An intelligent composite score weighted across Drive Health & Space (35%), Stability & Blue Screens (25%), Battery & Power (20%), and CPU/RAM Load (20%). Automatically saves scan history to `%LOCALAPPDATA%\HardwareSentinel\history.json` and tracks performance deltas over time (e.g. `+5% vs prior scan`).
+- **🚀 One-Click System Utilities Toolbar**: Direct shortcuts to native Windows diagnostic and maintenance tools:
+  - **Stability Timeline**: One-click launcher for Windows Reliability Monitor (`perfmon /rel`).
+  - **Storage Cleanup**: Instant access to Windows Storage Sense (`ms-settings:storagesense`) and Disk Cleanup (`cleanmgr.exe`).
+  - **Resource Monitor & Task Manager**: Direct shortcuts to `resmon.exe` and `taskmgr.exe`.
+- **🧠 Hardware Specs & Upgrade Intelligence**:
+  - **RAM Upgradability**: Inspects physical memory modules and motherboard slots (e.g. `2 of 4 slots used @ 3200 MHz`), helping users determine whether they can easily upgrade their RAM.
+  - **GPU & Display Adapter**: Surfaces dedicated/integrated graphics model, VRAM in GB, and flags outdated drivers (>12 months).
+  - **Drive Media Types**: Clear badging for high-speed **NVMe SSD**, standard **SATA SSD**, and mechanical **HDD**.
+- **🛡️ Security & Windows Baseline Audit**:
+  - **BitLocker Drive Encryption**: Reports whether the system drive is Encrypted (Protected) or Unencrypted.
+  - **Pending Reboot Detection**: Detects if Windows updates or servicing operations are awaiting a restart.
+  - **TPM 2.0 & Secure Boot**: Inspects hardware security module and UEFI Secure Boot readiness.
+- **🌲 Interactive Disk Space Visualizer**: Click into the Storage section to launch an interactive, hierarchical disk visualizer with folder tree search/filtering, size percentage bars, a **Largest Files Finder** (files >= 50MB), and a native **"Move to Recycle Bin"** action (with standard Windows confirmation modal).
 - **🔋 Intelligent Power & Battery Diagnostics**: Queries full OEM battery reports using native Windows telemetry (`powercfg.exe /batteryreport /xml`). Calculates design vs. full capacity degradation wear %, lifetime cycle count, and estimates remaining battery health. *Gracefully detects desktop PCs on wall power without score penalties.*
 - **💥 Crash & BlueScreen History**: Reads minidumps (`C:\Windows\Minidump`) and Windows Event Log system events (BugCheck 1001 and Kernel-Power 41). Automatically translates cryptic NTSTATUS / HEX stop codes into plain English explanations (e.g. `CRITICAL_PROCESS_DIED`, `PAGE_FAULT_IN_NONPAGED_AREA`).
 - **🖥️ Dual Mode (GUI + CLI)**:

@@ -54,9 +54,18 @@ function Get-SentinelStorageInfo {
         if ($rawDisks) {
             foreach ($d in $rawDisks) {
                 $sizeGB = [Math]::Round(($d.Size / 1GB), 1)
+                $mediaType = if ($d.MediaType) { $d.MediaType.ToString() } else { "SSD" }
+                if ($d.BusType -eq "NVMe" -or ($d.FriendlyName -like "*NVMe*")) {
+                    $mediaType = "NVMe SSD"
+                } elseif ($mediaType -eq "SSD") {
+                    $mediaType = "SATA SSD"
+                } elseif ($mediaType -eq "HDD") {
+                    $mediaType = "Mechanical HDD"
+                }
+
                 $physicalDisks += @{
                     FriendlyName      = $d.FriendlyName
-                    MediaType         = if ($d.MediaType) { $d.MediaType.ToString() } else { "SSD / NVMe" }
+                    MediaType         = $mediaType
                     HealthStatus      = if ($d.HealthStatus) { $d.HealthStatus.ToString() } else { "Healthy" }
                     OperationalStatus = if ($d.OperationalStatus) { ($d.OperationalStatus -join ", ") } else { "OK" }
                     SizeGB            = $sizeGB
@@ -91,6 +100,18 @@ function Get-SentinelStorageInfo {
             $usedGB = [Math]::Round(($totalGB - $freeGB), 1)
             $pctFree = if ($totalGB -gt 0) { [Math]::Round(($freeGB / $totalGB) * 100, 1) } else { 0 }
 
+            $bitlocker = "Unknown"
+            try {
+                $bl = Get-BitLockerVolume -MountPoint $v.DeviceID -ErrorAction SilentlyContinue
+                if ($bl) {
+                    $bitlocker = if ($bl.ProtectionStatus -eq "On" -or $bl.ProtectionStatus -eq 1) { "Encrypted (Protected)" } else { "Unencrypted" }
+                }
+            } catch {}
+            if ($bitlocker -eq "Unknown") {
+                $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+                $bitlocker = if (-not $isAdmin) { "Requires Admin" } else { "Not Configured" }
+            }
+
             $drives += @{
                 DeviceID      = $v.DeviceID
                 VolumeName    = if ($v.VolumeName) { $v.VolumeName } else { "Local Disk" }
@@ -100,6 +121,7 @@ function Get-SentinelStorageInfo {
                 UsedGB        = $usedGB
                 PercentFree   = $pctFree
                 IsSystemDrive = ($v.DeviceID -eq $env:SystemDrive)
+                BitLocker     = $bitlocker
                 Status        = if ($pctFree -lt 10) { "Critical" } elseif ($pctFree -lt 18) { "Warning" } else { "Healthy" }
             }
         }
@@ -340,6 +362,64 @@ function Get-SentinelPerformanceInfo {
         }
     } catch {}
 
+    # RAM Slot & Speed Telemetry
+    $ramSlotsTotal = 0
+    $ramSlotsUsed  = 0
+    $ramSpeedMHz   = 0
+    $ramDetailsStr = ""
+    try {
+        $ramArray = Get-CimInstance -ClassName Win32_PhysicalMemoryArray -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($ramArray -and $ramArray.MemoryDevices) {
+            $ramSlotsTotal = [int]$ramArray.MemoryDevices
+        }
+        $ramModules = Get-CimInstance -ClassName Win32_PhysicalMemory -ErrorAction SilentlyContinue
+        if ($ramModules) {
+            $ramSlotsUsed = ($ramModules | Measure-Object).Count
+            $firstSpeed = ($ramModules | Where-Object { $_.Speed -gt 0 } | Select-Object -First 1).Speed
+            if ($firstSpeed) { $ramSpeedMHz = [int]$firstSpeed }
+        }
+        if ($ramSlotsTotal -gt 0 -and $ramSlotsUsed -gt 0) {
+            $ramDetailsStr = "$ramSlotsUsed of $ramSlotsTotal slots used"
+            if ($ramSpeedMHz -gt 0) { $ramDetailsStr += " @ $ramSpeedMHz MHz" }
+        } elseif ($ramSlotsUsed -gt 0) {
+            $ramDetailsStr = "$ramSlotsUsed slot(s) populated"
+            if ($ramSpeedMHz -gt 0) { $ramDetailsStr += " @ $ramSpeedMHz MHz" }
+        }
+    } catch {}
+
+    # GPU / Graphics Adapter Telemetry
+    $gpuList = @()
+    try {
+        $videoControllers = Get-CimInstance -ClassName Win32_VideoController -ErrorAction SilentlyContinue | Where-Object {
+            $_.Name -and $_.PNPDeviceID -notlike "*BasicRenderDriver*" -and $_.Name -notlike "*Remote Display*"
+        }
+        if (-not $videoControllers -or $videoControllers.Count -eq 0) {
+            $videoControllers = Get-CimInstance -ClassName Win32_VideoController -ErrorAction SilentlyContinue
+        }
+        foreach ($vc in $videoControllers) {
+            $vramGB = if ($vc.AdapterRAM -gt 0) { [Math]::Round(($vc.AdapterRAM / 1GB), 1) } else { 0 }
+            $driverDateStr = ""
+            $driverAgeMonths = 0
+            if ($vc.DriverDate) {
+                try {
+                    $dDate = [datetime]$vc.DriverDate
+                    $driverDateStr = $dDate.ToString("yyyy-MM-dd")
+                    $driverAgeMonths = [int][Math]::Round(((Get-Date) - $dDate).TotalDays / 30.4)
+                } catch {}
+            }
+            $gpuList += [PSCustomObject]@{
+                Name            = ($vc.Name -replace '\s+', ' ').Trim()
+                VramGB          = $vramGB
+                DriverVersion   = $vc.DriverVersion
+                DriverDate      = $driverDateStr
+                DriverAgeMonths = $driverAgeMonths
+                IsOutdated      = ($driverAgeMonths -gt 12)
+            }
+        }
+    } catch {}
+
+    $primaryGpu = if ($gpuList.Count -gt 0) { $gpuList[0] } else { $null }
+
     return @{
         ProcessorName        = $cpuName
         PhysicalCores        = $cores
@@ -349,6 +429,12 @@ function Get-SentinelPerformanceInfo {
         UsedRamGB            = $usedRamGB
         FreeRamGB            = $freeRamGB
         RamUsedPercent       = $ramUsedPercent
+        RamSlotsTotal        = $ramSlotsTotal
+        RamSlotsUsed         = $ramSlotsUsed
+        RamSpeedMHz          = $ramSpeedMHz
+        RamDetails           = $ramDetailsStr
+        GpuList              = $gpuList
+        PrimaryGpu           = $primaryGpu
         SystemUptime         = $uptimeStr
         OperatingSystem      = $osName
         TopMemoryProcesses   = $topMemory
@@ -441,17 +527,165 @@ function Get-SentinelStabilityInfo {
     }
 }
 
-# 5. Calculate Overall Health Score (0 - 100%)
+# 5. Inspect Security Baseline (BitLocker, Pending Reboot, TPM 2.0, Secure Boot)
+function Get-SentinelSecurityInfo {
+    # Pending Reboot Check
+    $rebootPending = $false
+    $rebootReasons = @()
+    try {
+        if (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending") {
+            $rebootPending = $true
+            $rebootReasons += "Windows CBS Servicing update installed"
+        }
+        if (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired") {
+            $rebootPending = $true
+            $rebootReasons += "Windows Update pending restart"
+        }
+        $sessionMan = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "PendingFileRenameOperations" -ErrorAction SilentlyContinue
+        if ($sessionMan -and $sessionMan.PendingFileRenameOperations) {
+            $rebootPending = $true
+            $rebootReasons += "Pending file rename operations awaiting restart"
+        }
+    } catch {}
+
+    # BitLocker Status for System Drive
+    $bitlocker = "Unknown"
+    $sysDrive = if ($env:SystemDrive) { $env:SystemDrive } else { "C:" }
+    try {
+        $bl = Get-BitLockerVolume -MountPoint $sysDrive -ErrorAction SilentlyContinue
+        if ($bl) {
+            if ($bl.ProtectionStatus -eq "On" -or $bl.ProtectionStatus -eq 1) {
+                $bitlocker = "Encrypted (Protected)"
+            } else {
+                $bitlocker = "Unencrypted"
+            }
+        }
+    } catch {}
+    if ($bitlocker -eq "Unknown") {
+        $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        if (-not $isAdmin) {
+            $bitlocker = "Requires Admin"
+        } else {
+            $bitlocker = "Unencrypted / Not Configured"
+        }
+    }
+
+    # TPM 2.0 Check
+    $tpmPresent = $false
+    $tpmReady = $false
+    $tpmStatusStr = "Not Detected / Disabled"
+    try {
+        $tpm = Get-Tpm -ErrorAction SilentlyContinue
+        if ($tpm) {
+            $tpmPresent = [bool]$tpm.TpmPresent
+            $tpmReady = [bool]$tpm.TpmReady
+            if ($tpmPresent -and $tpmReady) {
+                $tpmStatusStr = "TPM 2.0 Present & Ready"
+            } elseif ($tpmPresent) {
+                $tpmStatusStr = "TPM Present (Not Ready)"
+            }
+        }
+    } catch {}
+
+    # Secure Boot Check
+    $secureBootStatus = "Unavailable / Legacy BIOS"
+    try {
+        $sb = Confirm-SecureBootUEFI -ErrorAction Stop
+        if ($sb -eq $true) {
+            $secureBootStatus = "Secure Boot Enabled (UEFI)"
+        } elseif ($sb -eq $false) {
+            $secureBootStatus = "Secure Boot Disabled"
+        }
+    } catch {}
+
+    return @{
+        RebootPending    = $rebootPending
+        RebootReasons    = $rebootReasons
+        BitLockerStatus  = $bitlocker
+        TpmStatus        = $tpmStatusStr
+        TpmReady         = $tpmReady
+        SecureBootStatus = $secureBootStatus
+    }
+}
+
+# 6. Persistent Scan History & Trend Tracking
+function Get-SentinelHistory {
+    $historyDir = Join-Path $env:LOCALAPPDATA "HardwareSentinel"
+    $historyFile = Join-Path $historyDir "history.json"
+    if (Test-Path $historyFile) {
+        try {
+            $raw = Get-Content $historyFile -Raw -ErrorAction SilentlyContinue
+            if ($raw) {
+                return ($raw | ConvertFrom-Json)
+            }
+        } catch {}
+    }
+    return @()
+}
+
+function Save-SentinelHistory {
+    param($Result)
+    try {
+        $historyDir = Join-Path $env:LOCALAPPDATA "HardwareSentinel"
+        if (-not (Test-Path $historyDir)) { New-Item -ItemType Directory -Path $historyDir -Force | Out-Null }
+        $historyFile = Join-Path $historyDir "history.json"
+        $entries = @(Get-SentinelHistory)
+
+        $newEntry = [PSCustomObject]@{
+            Timestamp          = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+            HealthScore        = $Result.Health.Score
+            Grade              = $Result.Health.Grade
+            CrashesLast30Days  = $Result.Stability.CrashesLast30Days
+            BatteryWearPercent = if ($Result.Battery.IsBatteryPresent) { $Result.Battery.WearLevelPercent } else { 0 }
+            UsedRamGB          = $Result.Performance.UsedRamGB
+            SystemDriveFreeGB  = ($Result.Storage.Volumes | Where-Object { $_.IsSystemDrive } | Select-Object -First 1).FreeGB
+        }
+
+        # Keep last 50 scans
+        $updated = @($newEntry) + $entries | Select-Object -First 50
+        $json = $updated | ConvertTo-Json -Depth 4
+        [System.IO.File]::WriteAllText($historyFile, $json, [System.Text.Encoding]::UTF8)
+    } catch {}
+}
+
+function Get-SentinelScoreTrend {
+    $entries = @(Get-SentinelHistory)
+    if ($entries.Count -gt 0) {
+        return $entries[0] # Most recent prior entry
+    }
+    return $null
+}
+
+# 7. Calculate Overall Health Score (0 - 100%)
 function Calculate-SentinelHealthScore {
     param(
         $Storage,
         $Battery,
         $Performance,
-        $Stability
+        $Stability,
+        $Security = $null
     )
 
     $score = 100
     $penalties = @()
+
+    # Security & Baseline Check
+    if ($Security) {
+        if ($Security.RebootPending) {
+            $score -= 3
+            $penalties += "System has a pending Windows restart from recent updates; restart recommended."
+        }
+        if ($Security.BitLockerStatus -eq "Unencrypted") {
+            $penalties += "System drive ($env:SystemDrive) is unencrypted. Consider enabling BitLocker for data protection."
+        }
+    }
+    if ($Performance.GpuList) {
+        foreach ($g in $Performance.GpuList) {
+            if ($g.IsOutdated) {
+                $penalties += "GPU driver ($($g.Name)) is over $($g.DriverAgeMonths) months old ($($g.DriverDate)). Consider checking vendor updates."
+            }
+        }
+    }
 
     # Storage Check (Max -30 pts)
     $hasDriveWarning = $false
@@ -658,6 +892,10 @@ function New-SentinelHtmlReport {
         <tr><td style="width: 30%;"><strong>Processor</strong></td><td>$($Result.Performance.ProcessorName) ($($Result.Performance.PhysicalCores) Cores / $($Result.Performance.LogicalProcessors) Threads)</td></tr>
         <tr><td><strong>Current CPU Load</strong></td><td>$($Result.Performance.CpuLoadPercent)%</td></tr>
         <tr><td><strong>Memory (RAM)</strong></td><td>$($Result.Performance.UsedRamGB) GB used of $($Result.Performance.TotalRamGB) GB ($($Result.Performance.RamUsedPercent)% in use - $($Result.Performance.FreeRamGB) GB available)</td></tr>
+        <tr><td><strong>Memory Slots &amp; Speed</strong></td><td>$($Result.Performance.RamDetails)</td></tr>
+        $(if ($Result.Performance.PrimaryGpu) {
+          "<tr><td><strong>Graphics Adapter (GPU)</strong></td><td>$($Result.Performance.PrimaryGpu.Name) ($($Result.Performance.PrimaryGpu.VramGB) GB VRAM - Driver: $($Result.Performance.PrimaryGpu.DriverDate))</td></tr>"
+        })
         <tr><td><strong>System Uptime</strong></td><td>$($Result.Performance.SystemUptime)</td></tr>
         <tr><td><strong>Operating System</strong></td><td>$($Result.Performance.OperatingSystem)</td></tr>
       </table>
@@ -669,6 +907,17 @@ function New-SentinelHtmlReport {
         "<h3 style='font-size: 1rem; margin: 20px 0 10px 0; color: #94A3B8;'>Top Memory Consumers (RAM)</h3>" +
         "<table><thead><tr><th>Process Name</th><th>Memory Used</th></tr></thead><tbody>$topMemRows</tbody></table>"
       })
+    </div>
+
+    <!-- Security & Baseline Card -->
+    <div class="card">
+      <h2>Security &amp; Windows Baseline Audit</h2>
+      <table>
+        <tr><td style="width: 30%;"><strong>BitLocker Drive Encryption</strong></td><td>$($Result.Security.BitLockerStatus)</td></tr>
+        <tr><td><strong>Pending Reboot Status</strong></td><td>$(if ($Result.Security.RebootPending) { "<span style='color: #F59E0B;'>Restart Required</span> ($($Result.Security.RebootReasons -join ', '))" } else { "<span style='color: #10B981;'>Clean (No pending reboot)</span>" })</td></tr>
+        <tr><td><strong>TPM 2.0 Security</strong></td><td>$($Result.Security.TpmStatus)</td></tr>
+        <tr><td><strong>Secure Boot</strong></td><td>$($Result.Security.SecureBootStatus)</td></tr>
+      </table>
     </div>
 
     <!-- Battery Card -->
@@ -718,7 +967,9 @@ if ($Scan -and -not $LoadFunctionsOnly) {
     $battery     = Get-SentinelBatteryInfo
     $performance = Get-SentinelPerformanceInfo
     $stability   = Get-SentinelStabilityInfo
-    $health      = Calculate-SentinelHealthScore -Storage $storage -Battery $battery -Performance $performance -Stability $stability
+    $security    = Get-SentinelSecurityInfo
+    $health      = Calculate-SentinelHealthScore -Storage $storage -Battery $battery -Performance $performance -Stability $stability -Security $security
+    $trend       = Get-SentinelScoreTrend
 
     $result = @{
         ComputerName = $env:COMPUTERNAME
@@ -728,7 +979,12 @@ if ($Scan -and -not $LoadFunctionsOnly) {
         Battery      = $battery
         Performance  = $performance
         Stability    = $stability
+        Security     = $security
+        Trend        = $trend
     }
+
+    # Save to persistent history
+    Save-SentinelHistory -Result $result
 
     if ($Format -eq "Json") {
         $json = $result | ConvertTo-Json -Depth 6
@@ -752,9 +1008,18 @@ if ($Scan -and -not $LoadFunctionsOnly) {
         Write-DiagnosticLog "Computer: $($env:COMPUTERNAME) | OS: $($performance.OperatingSystem)" "INFO"
         Write-DiagnosticLog "Overall Health Score: $($health.Score)/100 ($($health.Grade))" $(if ($health.Score -ge 85) { "PASS" } else { "WARN" })
         Write-DiagnosticLog "Processor: $($performance.ProcessorName) ($($performance.PhysicalCores) Cores, Load: $($performance.CpuLoadPercent)%)" "INFO"
-        Write-DiagnosticLog "Memory: $($performance.UsedRamGB) GB used / $($performance.TotalRamGB) GB total ($($performance.FreeRamGB) GB free)" "INFO"
+        if ($performance.PrimaryGpu) {
+            Write-DiagnosticLog "Graphics: $($performance.PrimaryGpu.Name) ($($performance.PrimaryGpu.VramGB) GB VRAM)" "INFO"
+        }
+        Write-DiagnosticLog "Memory: $($performance.UsedRamGB) GB used / $($performance.TotalRamGB) GB total ($($performance.RamDetails))" "INFO"
         Write-DiagnosticLog "Power: $($battery.StatusSummary)" "INFO"
+        Write-DiagnosticLog "Security: BitLocker: $($security.BitLockerStatus) | Reboot Pending: $($security.RebootPending) | TPM: $($security.TpmStatus)" "INFO"
         Write-DiagnosticLog "Crashes (Last 30d): $($stability.CrashesLast30Days) | Sudden Power Cuts: $($stability.SuddenPowerCuts)" "INFO"
+        if ($trend) {
+            $diff = $health.Score - $trend.HealthScore
+            $diffStr = if ($diff -gt 0) { "+$diff" } else { "$diff" }
+            Write-DiagnosticLog "Trend: Previous score was $($trend.HealthScore)/100 on $($trend.Timestamp) ($diffStr pts)" "INFO"
+        }
 
         if ($storage.TopConsumers -and $storage.TopConsumers.Count -gt 0) {
             Write-Host ""
