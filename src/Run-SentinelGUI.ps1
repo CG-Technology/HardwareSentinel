@@ -39,8 +39,8 @@ function Do-WpfEvents {
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Hardware Sentinel - PC Health &amp; Diagnostics"
-        Height="730" Width="920"
-        MinHeight="650" MinWidth="820"
+        Height="760" Width="940"
+        MinHeight="680" MinWidth="850"
         WindowStartupLocation="CenterScreen"
         Background="#0B0F19"
         Foreground="#E2E8F0"
@@ -135,12 +135,11 @@ function Do-WpfEvents {
             <StackPanel Grid.Column="0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Background="#1E1B4B" BorderBrush="#4F46E5" BorderThickness="1" CornerRadius="6" Width="32" Height="32" Margin="0,0,10,0">
-                        <!-- Native Vector Shield Icon -->
                         <Path Data="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" Fill="#818CF8" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <TextBlock Text="Hardware Sentinel" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
                     <Border Background="#065F46" CornerRadius="10" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="v1.0.1" FontSize="11" FontWeight="Bold" Foreground="#34D399"/>
+                        <TextBlock Text="v1.0.2" FontSize="11" FontWeight="Bold" Foreground="#34D399"/>
                     </Border>
                 </StackPanel>
                 <TextBlock x:Name="TxtMachineSubtitle" Text="Computer: Checking... | OS: Windows" FontSize="12" Foreground="#94A3B8" Margin="42,4,0,0"/>
@@ -220,14 +219,22 @@ function Do-WpfEvents {
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
                         <Path Data="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm2 4h12V6H6v4zm0 4h12v-2H6v2zm0 4h6v-2H6v2z" Fill="#38BDF8" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Storage &amp; Drive Health" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
                     </StackPanel>
                     <StackPanel Grid.Row="1">
                         <TextBlock x:Name="TxtStorageSystemDrive" Text="C: Drive: Checking space..." FontSize="12" Foreground="#CBD5E1"/>
-                        <ProgressBar x:Name="ProgressStorage" Height="8" Margin="0,6,0,8" Value="0" Maximum="100" Background="#1E293B" Foreground="#10B981" BorderThickness="0"/>
-                        <TextBlock x:Name="TxtStorageDisks" Text="Physical Disks: Probing SMART..." FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap"/>
+                        <ProgressBar x:Name="ProgressStorage" Height="7" Margin="0,5,0,5" Value="0" Maximum="100" Background="#1E293B" Foreground="#10B981" BorderThickness="0"/>
+                        <TextBlock x:Name="TxtStorageDisks" Text="Physical Disks: Probing SMART..." FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                        
+                        <!-- Top Space Consumers on C: -->
+                        <Border Background="#161E2E" CornerRadius="6" Padding="8,6" Margin="0,2,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Largest Space Consumers on C:" FontSize="10.5" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,2"/>
+                                <TextBlock x:Name="TxtStorageTopConsumers" Text="Analyzing disk usage..." FontSize="11" Foreground="#E2E8F0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -239,13 +246,13 @@ function Do-WpfEvents {
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
                         <Path Data="M17 6h-2V5c0-.55-.45-1-1-1h-4c-.55 0-1 .45-1 1v1H7c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z" Fill="#10B981" Width="13" Height="13" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Battery &amp; Power Health" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
                     </StackPanel>
                     <StackPanel Grid.Row="1">
                         <TextBlock x:Name="TxtBatteryCondition" Text="Power Source: Detecting..." FontSize="12" Foreground="#CBD5E1"/>
-                        <ProgressBar x:Name="ProgressBattery" Height="8" Margin="0,6,0,8" Value="0" Maximum="100" Background="#1E293B" Foreground="#10B981" BorderThickness="0"/>
+                        <ProgressBar x:Name="ProgressBattery" Height="7" Margin="0,5,0,6" Value="0" Maximum="100" Background="#1E293B" Foreground="#10B981" BorderThickness="0"/>
                         <TextBlock x:Name="TxtBatteryDetails" Text="Checking capacity and cycle counts..." FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Grid>
@@ -258,15 +265,17 @@ function Do-WpfEvents {
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
                         <Path Data="M9 3L5 6.99h3V14H3v-3L0 15l3 4v-3h6v6h-3l4 4 4-4h-3v-6h5v3l3-4-3-4v3h-5V6.99h3L9 3z" Fill="#818CF8" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Processor &amp; Memory" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
                     </StackPanel>
                     <StackPanel Grid.Row="1">
                         <TextBlock x:Name="TxtProcessorName" Text="CPU: Detecting..." FontSize="12" Foreground="#CBD5E1"/>
-                        <TextBlock x:Name="TxtMemoryUsage" Text="RAM: Probing utilization..." FontSize="12" Foreground="#CBD5E1" Margin="0,4,0,0"/>
-                        <ProgressBar x:Name="ProgressMemory" Height="8" Margin="0,6,0,8" Value="0" Maximum="100" Background="#1E293B" Foreground="#6366F1" BorderThickness="0"/>
-                        <TextBlock x:Name="TxtUptime" Text="Uptime: Calculating..." FontSize="11" Foreground="#94A3B8"/>
+                        <TextBlock x:Name="TxtTopCpu" Text="Active CPU: Analyzing threads..." FontSize="10.5" Foreground="#38BDF8" Margin="0,2,0,4" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="TxtMemoryUsage" Text="RAM: Probing utilization..." FontSize="12" Foreground="#CBD5E1"/>
+                        <ProgressBar x:Name="ProgressMemory" Height="7" Margin="0,5,0,4" Value="0" Maximum="100" Background="#1E293B" Foreground="#6366F1" BorderThickness="0"/>
+                        <TextBlock x:Name="TxtTopMemory" Text="Top RAM: Analyzing memory..." FontSize="10.5" Foreground="#A78BFA" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="TxtUptime" Text="Uptime: Calculating..." FontSize="11" Foreground="#64748B"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -278,7 +287,7 @@ function Do-WpfEvents {
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
                         <Path Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" Fill="#F87171" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Stability &amp; Crash History" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
                     </StackPanel>
@@ -318,17 +327,20 @@ $txtScanStep         = $window.FindName("TxtScanStep")
 $txtScanPercent      = $window.FindName("TxtScanPercent")
 $progressScanOverall = $window.FindName("ProgressScanOverall")
 
-$txtStorageSystemDrive = $window.FindName("TxtStorageSystemDrive")
-$progressStorage       = $window.FindName("ProgressStorage")
-$txtStorageDisks       = $window.FindName("TxtStorageDisks")
+$txtStorageSystemDrive   = $window.FindName("TxtStorageSystemDrive")
+$progressStorage         = $window.FindName("ProgressStorage")
+$txtStorageDisks         = $window.FindName("TxtStorageDisks")
+$txtStorageTopConsumers  = $window.FindName("TxtStorageTopConsumers")
 
 $txtBatteryCondition   = $window.FindName("TxtBatteryCondition")
 $progressBattery       = $window.FindName("ProgressBattery")
 $txtBatteryDetails     = $window.FindName("TxtBatteryDetails")
 
 $txtProcessorName      = $window.FindName("TxtProcessorName")
+$txtTopCpu             = $window.FindName("TxtTopCpu")
 $txtMemoryUsage        = $window.FindName("TxtMemoryUsage")
 $progressMemory        = $window.FindName("ProgressMemory")
+$txtTopMemory          = $window.FindName("TxtTopMemory")
 $txtUptime             = $window.FindName("TxtUptime")
 
 $txtCrashSummary       = $window.FindName("TxtCrashSummary")
@@ -372,14 +384,17 @@ function Invoke-DiagnosticsScan {
     $txtStorageSystemDrive.Text     = "C: Drive: Probing free space..."
     $progressStorage.Value          = 0
     $txtStorageDisks.Text           = "Physical Disks: Querying SMART telemetry..."
+    $txtStorageTopConsumers.Text    = "Scanning largest folders & files on C:..."
 
     $txtBatteryCondition.Text       = "Power Source: Detecting battery and power supply..."
     $progressBattery.Value          = 0
     $txtBatteryDetails.Text         = "Reading factory design vs full charge capacity..."
 
     $txtProcessorName.Text          = "CPU: Detecting model and active load..."
+    $txtTopCpu.Text                 = "Active CPU: Analyzing threads..."
     $txtMemoryUsage.Text            = "RAM: Probing utilization and available memory..."
     $progressMemory.Value           = 0
+    $txtTopMemory.Text              = "Top RAM: Inspecting process working sets..."
     $txtUptime.Text                 = "Uptime: Calculating system running time..."
 
     $txtCrashSummary.Text           = "Stability: Scanning minidump directory..."
@@ -394,9 +409,9 @@ function Invoke-DiagnosticsScan {
     # STEP 1: Storage & Drive Health (20%)
     # -------------------------------------------------------------
     $progressScanOverall.Value = 20
-    $txtScanStep.Text          = "Step 1 of 5: Probing storage drives and SMART telemetry..."
+    $txtScanStep.Text          = "Step 1 of 5: Probing storage drives, SMART telemetry, and top space consumers..."
     $txtScanPercent.Text       = "20%"
-    $txtStatusFooter.Text      = "Reading physical disk health and partition space..."
+    $txtStatusFooter.Text      = "Reading physical disk health, partition space, and largest folders..."
     Do-WpfEvents
 
     $storage = Get-SentinelStorageInfo
@@ -410,6 +425,13 @@ function Invoke-DiagnosticsScan {
     }
     $disksText = ($storage.PhysicalDisks | ForEach-Object { "$($_.FriendlyName) ($($_.MediaType), $($_.SizeGB) GB): $($_.HealthStatus)" }) -join " | "
     $txtStorageDisks.Text = if ($disksText) { $disksText } else { "Physical drives reporting healthy SMART telemetry." }
+
+    if ($storage.TopConsumers -and $storage.TopConsumers.Count -gt 0) {
+        $topStr = ($storage.TopConsumers | ForEach-Object { "$($_.Name): $($_.Display)" }) -join "   |   "
+        $txtStorageTopConsumers.Text = $topStr
+    } else {
+        $txtStorageTopConsumers.Text = "Standard system directories within normal capacity."
+    }
     Do-WpfEvents
 
     # -------------------------------------------------------------
@@ -441,17 +463,31 @@ function Invoke-DiagnosticsScan {
     # STEP 3: Processor & Memory (60%)
     # -------------------------------------------------------------
     $progressScanOverall.Value = 60
-    $txtScanStep.Text          = "Step 3 of 5: Analyzing CPU load, memory utilization, and uptime..."
+    $txtScanStep.Text          = "Step 3 of 5: Analyzing CPU load, memory utilization, and top processes..."
     $txtScanPercent.Text       = "60%"
-    $txtStatusFooter.Text      = "Measuring CPU thread activity and memory pressure..."
+    $txtStatusFooter.Text      = "Measuring active CPU threads and process memory working sets..."
     Do-WpfEvents
 
     $performance = Get-SentinelPerformanceInfo
 
     # Update CPU/RAM Card Live!
     $txtProcessorName.Text = "CPU: $($performance.ProcessorName) ($($performance.PhysicalCores) Cores, Load: $($performance.CpuLoadPercent)%)"
+    if ($performance.TopCpuProcesses -and $performance.TopCpuProcesses.Count -gt 0) {
+        $topCpuStr = ($performance.TopCpuProcesses | ForEach-Object { "$($_.Name) ($($_.Display))" }) -join "   |   "
+        $txtTopCpu.Text = "Active CPU: $topCpuStr"
+    } else {
+        $txtTopCpu.Text = "Active CPU: Idle (No high-usage processes)"
+    }
+
     $txtMemoryUsage.Text   = "RAM: $($performance.UsedRamGB) GB used / $($performance.TotalRamGB) GB total ($($performance.FreeRamGB) GB free)"
     $progressMemory.Value  = $performance.RamUsedPercent
+    if ($performance.TopMemoryProcesses -and $performance.TopMemoryProcesses.Count -gt 0) {
+        $topMemStr = ($performance.TopMemoryProcesses | ForEach-Object { "$($_.Name) ($($_.Display))" }) -join "   |   "
+        $txtTopMemory.Text = "Top RAM: $topMemStr"
+    } else {
+        $txtTopMemory.Text = "Top RAM: Within standard operating limits"
+    }
+
     $txtUptime.Text        = "System Uptime: $($performance.SystemUptime)"
     $txtMachineSubtitle.Text = "Computer: $($env:COMPUTERNAME) | OS: $($performance.OperatingSystem)"
     Do-WpfEvents
@@ -571,15 +607,35 @@ $btnSaveReport.Add_Click({
 $btnCopySummary.Add_Click({
     if (-not $script:lastResult) { return }
     $d = $script:lastResult
+
+    $consumerSummary = if ($d.Storage.TopConsumers -and $d.Storage.TopConsumers.Count -gt 0) { 
+        ($d.Storage.TopConsumers | ForEach-Object { "  - $($_.Name): $($_.Display)" }) -join "`n" 
+    } else { "  - Standard system directories within normal thresholds" }
+
+    $topCpuSummary = if ($d.Performance.TopCpuProcesses -and $d.Performance.TopCpuProcesses.Count -gt 0) { 
+        ($d.Performance.TopCpuProcesses | ForEach-Object { "$($_.Name) ($($_.Display))" }) -join ", " 
+    } else { "Idle" }
+
+    $topMemSummary = if ($d.Performance.TopMemoryProcesses -and $d.Performance.TopMemoryProcesses.Count -gt 0) { 
+        ($d.Performance.TopMemoryProcesses | ForEach-Object { "$($_.Name) ($($_.Display))" }) -join ", " 
+    } else { "None" }
+
     $summary = @"
 Hardware Sentinel - PC Health Summary
 Computer: $($d.ComputerName)
 Operating System: $($d.Performance.OperatingSystem)
 Health Score: $($d.Health.Score)/100 ($($d.Health.Grade))
 
-Processor: $($d.Performance.ProcessorName)
+Processor: $($d.Performance.ProcessorName) (Load: $($d.Performance.CpuLoadPercent)%)
+Top Active CPU: $topCpuSummary
+
 Memory: $($d.Performance.UsedRamGB) GB used / $($d.Performance.TotalRamGB) GB ($($d.Performance.FreeRamGB) GB available)
+Top RAM Consumers: $topMemSummary
+
 Storage: $(($d.Storage.Volumes | ForEach-Object { "$($_.DeviceID) ($($_.PercentFree)% free)" }) -join ', ')
+Top Space Consumers on C:
+$consumerSummary
+
 Battery / Power: $($d.Battery.StatusSummary)
 Crashes (30d): $($d.Stability.CrashesLast30Days)
 Report Generated: $($d.Timestamp)

@@ -105,9 +105,84 @@ function Get-SentinelStorageInfo {
         }
     } catch {}
 
+    # Top Disk Consumers on System Drive (C:)
+    $topConsumers = @()
+    try {
+        $sysRoot = $env:SystemDrive + "\"
+
+        # User Downloads
+        $dlPath = Join-Path $env:USERPROFILE "Downloads"
+        if (Test-Path $dlPath) {
+            $dlSize = (Get-ChildItem $dlPath -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+            if ($dlSize -gt 100MB) {
+                $topConsumers += [PSCustomObject]@{
+                    Name    = "Downloads ($env:USERNAME)"
+                    Bytes   = $dlSize
+                    SizeGB  = [Math]::Round($dlSize / 1GB, 2)
+                    Display = "$([Math]::Round($dlSize / 1GB, 2)) GB"
+                }
+            }
+        }
+
+        # Temp Files (User and Windows Temp)
+        $tempTotal = 0
+        foreach ($tp in @($env:TEMP, "$sysRoot\Windows\Temp")) {
+            if (Test-Path $tp) {
+                $tSum = (Get-ChildItem $tp -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+                if ($tSum) { $tempTotal += $tSum }
+            }
+        }
+        if ($tempTotal -gt 100MB) {
+            $topConsumers += [PSCustomObject]@{
+                Name    = "Temp & Cache Files"
+                Bytes   = $tempTotal
+                SizeGB  = [Math]::Round($tempTotal / 1GB, 2)
+                Display = "$([Math]::Round($tempTotal / 1GB, 2)) GB"
+            }
+        }
+
+        # Large Root Files (Pagefile, Hiberfil, Swapfile)
+        $rootFiles = Get-ChildItem $sysRoot -Force -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer -and $_.Length -gt 250MB }
+        foreach ($rf in $rootFiles) {
+            $topConsumers += [PSCustomObject]@{
+                Name    = "$($rf.Name) (Virtual Memory)"
+                Bytes   = $rf.Length
+                SizeGB  = [Math]::Round($rf.Length / 1GB, 2)
+                Display = "$([Math]::Round($rf.Length / 1GB, 2)) GB"
+            }
+        }
+
+        # Major System Folders
+        $majorDirs = @(
+            @{ Label = "User Accounts (C:\Users)"; Path = "$sysRoot\Users" },
+            @{ Label = "Program Files"; Path = "$sysRoot\Program Files" },
+            @{ Label = "Program Files (x86)"; Path = "$sysRoot\Program Files (x86)" }
+        )
+        foreach ($md in $majorDirs) {
+            if (Test-Path $md.Path) {
+                $rob = robocopy $md.Path $md.Path /L /S /XJ /R:0 /W:0 /BYTES /NFL /NDL /NJH 2>&1
+                $line = $rob | Where-Object { $_ -match 'Bytes\s*:\s*(\d+)' } | Select-Object -First 1
+                if ($line -and ($line -match 'Bytes\s*:\s*(\d+)')) {
+                    $dBytes = [int64]$Matches[1]
+                    if ($dBytes -gt 500MB) {
+                        $topConsumers += [PSCustomObject]@{
+                            Name    = $md.Label
+                            Bytes   = $dBytes
+                            SizeGB  = [Math]::Round($dBytes / 1GB, 2)
+                            Display = "$([Math]::Round($dBytes / 1GB, 2)) GB"
+                        }
+                    }
+                }
+            }
+        }
+
+        $topConsumers = $topConsumers | Sort-Object Bytes -Descending | Select-Object -First 4
+    } catch {}
+
     return @{
         PhysicalDisks = $physicalDisks
         Volumes       = $drives
+        TopConsumers  = $topConsumers
     }
 }
 
@@ -222,6 +297,49 @@ function Get-SentinelPerformanceInfo {
         }
     } catch {}
 
+    # Top Memory Consumers
+    $topMemory = @()
+    try {
+        $topMemory = Get-Process -ErrorAction SilentlyContinue | Group-Object Name | ForEach-Object {
+            $sumBytes = ($_.Group | Measure-Object WorkingSet64 -Sum).Sum
+            $mb = [Math]::Round($sumBytes / 1MB, 1)
+            [PSCustomObject]@{
+                Name     = $_.Name
+                Bytes    = $sumBytes
+                SizeMB   = $mb
+                Display  = if ($mb -ge 1024) { "$([Math]::Round($mb / 1024, 2)) GB" } else { "$mb MB" }
+            }
+        } | Sort-Object Bytes -Descending | Select-Object -First 3
+    } catch {}
+
+    # Top CPU Processes (Delta sample)
+    $topCpu = @()
+    try {
+        $p1 = @{}
+        Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.CPU } | ForEach-Object { $p1[$_.Id] = $_.CPU }
+        Start-Sleep -Milliseconds 250
+        $coreCount = [Environment]::ProcessorCount
+        $topCpu = Get-Process -ErrorAction SilentlyContinue | Where-Object { $p1.ContainsKey($_.Id) } | ForEach-Object {
+            $deltaSec = $_.CPU - $p1[$_.Id]
+            $pct = [Math]::Round(($deltaSec / (0.25 * $coreCount)) * 100, 1)
+            [PSCustomObject]@{
+                Name       = $_.Name
+                CpuPercent = $pct
+                Display    = "$pct%"
+            }
+        } | Where-Object { $_.CpuPercent -gt 0 } | Sort-Object CpuPercent -Descending | Select-Object -First 3
+
+        if (-not $topCpu -or $topCpu.Count -eq 0) {
+            $topCpu = Get-Process -ErrorAction SilentlyContinue | Sort-Object CPU -Descending | Select-Object -First 3 | ForEach-Object {
+                [PSCustomObject]@{
+                    Name       = $_.Name
+                    CpuPercent = [Math]::Round($_.CPU, 1)
+                    Display    = "$([Math]::Round($_.CPU, 0))s total"
+                }
+            }
+        }
+    } catch {}
+
     return @{
         ProcessorName        = $cpuName
         PhysicalCores        = $cores
@@ -233,6 +351,8 @@ function Get-SentinelPerformanceInfo {
         RamUsedPercent       = $ramUsedPercent
         SystemUptime         = $uptimeStr
         OperatingSystem      = $osName
+        TopMemoryProcesses   = $topMemory
+        TopCpuProcesses      = $topCpu
     }
 }
 
@@ -446,6 +566,27 @@ function New-SentinelHtmlReport {
         }
     }
 
+    $consumerRows = ""
+    if ($Result.Storage.TopConsumers -and $Result.Storage.TopConsumers.Count -gt 0) {
+        foreach ($tc in $Result.Storage.TopConsumers) {
+            $consumerRows += "<tr><td><strong>$($tc.Name)</strong></td><td>$($tc.Display)</td></tr>"
+        }
+    }
+
+    $topCpuRows = ""
+    if ($Result.Performance.TopCpuProcesses -and $Result.Performance.TopCpuProcesses.Count -gt 0) {
+        foreach ($cp in $Result.Performance.TopCpuProcesses) {
+            $topCpuRows += "<tr><td><strong>$($cp.Name)</strong></td><td>$($cp.Display)</td></tr>"
+        }
+    }
+
+    $topMemRows = ""
+    if ($Result.Performance.TopMemoryProcesses -and $Result.Performance.TopMemoryProcesses.Count -gt 0) {
+        foreach ($mp in $Result.Performance.TopMemoryProcesses) {
+            $topMemRows += "<tr><td><strong>$($mp.Name)</strong></td><td>$($mp.Display)</td></tr>"
+        }
+    }
+
     $html = @"
 <!DOCTYPE html>
 <html lang="en">
@@ -504,6 +645,10 @@ function New-SentinelHtmlReport {
         <thead><tr><th>Drive</th><th>Total Space</th><th>Free Space</th><th>Status</th></tr></thead>
         <tbody>$storageRows</tbody>
       </table>
+      $(if ($consumerRows) {
+        "<h3 style='font-size: 1rem; margin: 20px 0 10px 0; color: #94A3B8;'>Largest Space Consumers on System Drive (C:)</h3>" +
+        "<table><thead><tr><th>Location / Item</th><th>Size</th></tr></thead><tbody>$consumerRows</tbody></table>"
+      })
     </div>
 
     <!-- Memory & CPU Card -->
@@ -516,6 +661,14 @@ function New-SentinelHtmlReport {
         <tr><td><strong>System Uptime</strong></td><td>$($Result.Performance.SystemUptime)</td></tr>
         <tr><td><strong>Operating System</strong></td><td>$($Result.Performance.OperatingSystem)</td></tr>
       </table>
+      $(if ($topCpuRows) {
+        "<h3 style='font-size: 1rem; margin: 20px 0 10px 0; color: #94A3B8;'>Top Active CPU Processes</h3>" +
+        "<table><thead><tr><th>Process Name</th><th>CPU Utilization</th></tr></thead><tbody>$topCpuRows</tbody></table>"
+      })
+      $(if ($topMemRows) {
+        "<h3 style='font-size: 1rem; margin: 20px 0 10px 0; color: #94A3B8;'>Top Memory Consumers (RAM)</h3>" +
+        "<table><thead><tr><th>Process Name</th><th>Memory Used</th></tr></thead><tbody>$topMemRows</tbody></table>"
+      })
     </div>
 
     <!-- Battery Card -->
@@ -602,6 +755,30 @@ if ($Scan -and -not $LoadFunctionsOnly) {
         Write-DiagnosticLog "Memory: $($performance.UsedRamGB) GB used / $($performance.TotalRamGB) GB total ($($performance.FreeRamGB) GB free)" "INFO"
         Write-DiagnosticLog "Power: $($battery.StatusSummary)" "INFO"
         Write-DiagnosticLog "Crashes (Last 30d): $($stability.CrashesLast30Days) | Sudden Power Cuts: $($stability.SuddenPowerCuts)" "INFO"
+
+        if ($storage.TopConsumers -and $storage.TopConsumers.Count -gt 0) {
+            Write-Host ""
+            Write-Host "Top Disk Consumers on System Drive (C:):" -ForegroundColor Cyan
+            foreach ($tc in $storage.TopConsumers) {
+                Write-Host "  - $($tc.Name): $($tc.Display)" -ForegroundColor Gray
+            }
+        }
+
+        if ($performance.TopCpuProcesses -and $performance.TopCpuProcesses.Count -gt 0) {
+            Write-Host ""
+            Write-Host "Top Active CPU Processes:" -ForegroundColor Cyan
+            foreach ($cp in $performance.TopCpuProcesses) {
+                Write-Host "  - $($cp.Name): $($cp.Display)" -ForegroundColor Gray
+            }
+        }
+
+        if ($performance.TopMemoryProcesses -and $performance.TopMemoryProcesses.Count -gt 0) {
+            Write-Host ""
+            Write-Host "Top Memory Consumers (RAM):" -ForegroundColor Cyan
+            foreach ($mp in $performance.TopMemoryProcesses) {
+                Write-Host "  - $($mp.Name): $($mp.Display)" -ForegroundColor Gray
+            }
+        }
 
         if ($health.Observations.Count -gt 0) {
             Write-Host ""
