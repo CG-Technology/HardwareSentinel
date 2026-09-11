@@ -139,7 +139,7 @@ function Do-WpfEvents {
                     </Border>
                     <TextBlock Text="Hardware Sentinel" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
                     <Border Background="#065F46" CornerRadius="10" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="v1.0.2" FontSize="11" FontWeight="Bold" Foreground="#34D399"/>
+                        <TextBlock Text="v1.0.3" FontSize="11" FontWeight="Bold" Foreground="#34D399"/>
                     </Border>
                 </StackPanel>
                 <TextBlock x:Name="TxtMachineSubtitle" Text="Computer: Checking... | OS: Windows" FontSize="12" Foreground="#94A3B8" Margin="42,4,0,0"/>
@@ -213,25 +213,36 @@ function Do-WpfEvents {
             </Grid.ColumnDefinitions>
 
             <!-- Card 1: Storage & Drives -->
-            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,8,8">
+            <Border x:Name="CardStorage" Grid.Row="0" Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,8,8" Cursor="Hand" ToolTip="Click to open TreeSize Disk Space Analyzer">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
-                        <Path Data="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm2 4h12V6H6v4zm0 4h12v-2H6v2zm0 4h6v-2H6v2z" Fill="#38BDF8" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Storage &amp; Drive Health" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
-                    </StackPanel>
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm2 4h12V6H6v4zm0 4h12v-2H6v2zm0 4h6v-2H6v2z" Fill="#38BDF8" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Storage &amp; Drive Health" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button x:Name="BtnOpenDiskTree" Style="{StaticResource ActionButton}" HorizontalAlignment="Right" Padding="8,2" FontSize="11" ToolTip="Explore folder hierarchy and largest files">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" Fill="#38BDF8" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Tree Analyzer" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                     <StackPanel Grid.Row="1">
                         <TextBlock x:Name="TxtStorageSystemDrive" Text="C: Drive: Checking space..." FontSize="12" Foreground="#CBD5E1"/>
                         <ProgressBar x:Name="ProgressStorage" Height="7" Margin="0,5,0,5" Value="0" Maximum="100" Background="#1E293B" Foreground="#10B981" BorderThickness="0"/>
                         <TextBlock x:Name="TxtStorageDisks" Text="Physical Disks: Probing SMART..." FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,0,0,6"/>
                         
                         <!-- Top Space Consumers on C: -->
-                        <Border Background="#161E2E" CornerRadius="6" Padding="8,6" Margin="0,2,0,0">
+                        <Border x:Name="BorderStorageTopConsumers" Background="#161E2E" CornerRadius="6" Padding="8,6" Margin="0,2,0,0" Cursor="Hand" ToolTip="Click to open TreeSize Disk Space Analyzer">
                             <StackPanel>
-                                <TextBlock Text="Largest Space Consumers on C:" FontSize="10.5" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,2"/>
+                                <Grid Margin="0,0,0,2">
+                                    <TextBlock Text="Largest Space Consumers on C:" FontSize="10.5" FontWeight="Bold" Foreground="#38BDF8" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Explore &gt;" FontSize="10" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
                                 <TextBlock x:Name="TxtStorageTopConsumers" Text="Analyzing disk usage..." FontSize="11" Foreground="#E2E8F0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
@@ -331,6 +342,9 @@ $txtStorageSystemDrive   = $window.FindName("TxtStorageSystemDrive")
 $progressStorage         = $window.FindName("ProgressStorage")
 $txtStorageDisks         = $window.FindName("TxtStorageDisks")
 $txtStorageTopConsumers  = $window.FindName("TxtStorageTopConsumers")
+$cardStorage             = $window.FindName("CardStorage")
+$btnOpenDiskTree         = $window.FindName("BtnOpenDiskTree")
+$borderStorageTopConsumers = $window.FindName("BorderStorageTopConsumers")
 
 $txtBatteryCondition   = $window.FindName("TxtBatteryCondition")
 $progressBattery       = $window.FindName("ProgressBattery")
@@ -643,6 +657,36 @@ Report Generated: $($d.Timestamp)
     [System.Windows.Clipboard]::SetText($summary)
     $txtStatusFooter.Text = "Summary copied to clipboard!"
 })
+
+# Open TreeSize-style Disk Space Analyzer
+$openDiskTreeAction = {
+    $diskTreeScript = Join-Path $scriptDir "Show-SentinelDiskTree.ps1"
+    if (Test-Path $diskTreeScript) {
+        $sysDrive = if ($env:SystemDrive) { "$($env:SystemDrive)\" } else { "C:\" }
+        Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$diskTreeScript`" -InitialPath `"$sysDrive`""
+    } else {
+        [System.Windows.MessageBox]::Show("Disk Tree Analyzer script not found at:`n$diskTreeScript", "Hardware Sentinel", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+    }
+}
+
+if ($btnOpenDiskTree) {
+    $btnOpenDiskTree.Add_Click($openDiskTreeAction)
+}
+
+if ($cardStorage) {
+    $cardStorage.Add_MouseLeftButtonUp({
+        param($s, $e)
+        if ($e.OriginalSource -is [System.Windows.Controls.Button] -or $e.OriginalSource.Parent -is [System.Windows.Controls.Button]) { return }
+        & $openDiskTreeAction
+    })
+}
+
+if ($borderStorageTopConsumers) {
+    $borderStorageTopConsumers.Add_MouseLeftButtonUp({
+        param($s, $e)
+        & $openDiskTreeAction
+    })
+}
 
 # Initial Scan on window load
 $window.Add_ContentRendered({
