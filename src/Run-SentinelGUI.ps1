@@ -662,7 +662,7 @@ Report Generated: $($d.Timestamp)
 $openDiskTreeAction = {
     $diskTreeScript = Join-Path $scriptDir "Show-SentinelDiskTree.ps1"
     if (Test-Path $diskTreeScript) {
-        $sysDrive = if ($env:SystemDrive) { "$($env:SystemDrive)\" } else { "C:\" }
+        $sysDrive = if ($env:SystemDrive) { $env:SystemDrive.TrimEnd('\').TrimEnd(':') } else { "C" }
         Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$diskTreeScript`" -InitialPath `"$sysDrive`""
     } else {
         [System.Windows.MessageBox]::Show("Disk Tree Analyzer script not found at:`n$diskTreeScript", "Hardware Sentinel", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)

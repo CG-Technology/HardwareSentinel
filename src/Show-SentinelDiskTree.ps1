@@ -13,6 +13,15 @@ param(
     [string]$InitialPath = "C:\"
 )
 
+# Sanitize initial path (strips accidental trailing quotes or backslashes)
+if ($InitialPath) {
+    $cleanInit = $InitialPath.Trim().Trim('"').Trim("'").TrimEnd('\').TrimEnd(':')
+    if ([string]::IsNullOrWhiteSpace($cleanInit)) { $cleanInit = "C" }
+    $InitialPath = "$($cleanInit):\"
+} else {
+    $InitialPath = "C:\"
+}
+
 $ErrorActionPreference = "SilentlyContinue"
 
 Add-Type -AssemblyName PresentationFramework
@@ -456,8 +465,13 @@ function New-TreeNodeHeader {
 
     # Size text
     $txtSize = New-Object System.Windows.Controls.TextBlock
-    $txtSize.Text = Format-FileSize $Bytes
-    $txtSize.Foreground = $bc.ConvertFromString("#94A3B8")
+    if ($Bytes -lt 0) {
+        $txtSize.Text = "Calculating..."
+        $txtSize.Foreground = $bc.ConvertFromString("#38BDF8")
+    } else {
+        $txtSize.Text = Format-FileSize $Bytes
+        $txtSize.Foreground = $bc.ConvertFromString("#94A3B8")
+    }
     $txtSize.Margin = New-Object System.Windows.Thickness(10, 0, 0, 0)
     $txtSize.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
     [void]$panel.Children.Add($txtSize)
@@ -506,37 +520,15 @@ function Expand-FolderNode {
         $targetPath = [string]$Node.Tag
         if (-not (Test-Path -LiteralPath $targetPath)) { return }
 
-        $txtTreeScanStatus.Text = "Scanning $targetPath..."
+        $txtTreeScanStatus.Text = "Reading $targetPath..."
         Do-WpfEvents
 
-        # 1. Enumerate Directories
+        # 1. Enumerate Directories & Files instantly
         $subdirs = @()
         try {
             $subdirs = [System.IO.Directory]::GetDirectories($targetPath)
         } catch {}
 
-        # Calculate subfolder sizes
-        $dirEntries = @()
-        foreach ($sd in $subdirs) {
-            $dName = [System.IO.Path]::GetFileName($sd)
-            # Skip inaccessible system junctions
-            if ($dName -in @("System Volume Information", "`$RECYCLE.BIN")) {
-                $dirEntries += [PSCustomObject]@{
-                    Name  = $dName
-                    Path  = $sd
-                    Bytes = 0
-                }
-                continue
-            }
-            $dBytes = Get-FolderSizeFast $sd
-            $dirEntries += [PSCustomObject]@{
-                Name  = $dName
-                Path  = $sd
-                Bytes = $dBytes
-            }
-        }
-
-        # 2. Enumerate Files
         $fileEntries = @()
         try {
             $files = [System.IO.Directory]::GetFiles($targetPath)
@@ -552,48 +544,9 @@ function Expand-FolderNode {
 
         # Parent total size for percentage calculation
         $parentSize = [int64]$Node.ToolTip
-        if ($parentSize -le 0) {
-            $parentSize = ($dirEntries | Measure-Object -Property Bytes -Sum).Sum + ($fileEntries | Measure-Object -Property Bytes -Sum).Sum
-        }
+        if ($parentSize -le 0) { $parentSize = 1 }
 
-        # Add Subdirectories sorted descending by size
-        $dirEntries | Sort-Object Bytes -Descending | ForEach-Object {
-            $childNode = New-Object System.Windows.Controls.TreeViewItem
-            $childNode.Header = New-TreeNodeHeader -Name $_.Name -Bytes $_.Bytes -ParentBytes $parentSize -IsFolder $true
-            $childNode.Tag = $_.Path
-            $childNode.ToolTip = $_.Bytes
-
-            # Check if has subitems; if so, add dummy child for lazy expansion
-            $hasSub = $false
-            try {
-                if ([System.IO.Directory]::GetFileSystemEntries($_.Path).Count -gt 0) {
-                    $hasSub = $true
-                }
-            } catch {}
-
-            if ($hasSub) {
-                $dummy = New-Object System.Windows.Controls.TreeViewItem
-                $dummy.Header = "Loading..."
-                $dummy.Tag = "__DUMMY__"
-                [void]$childNode.Items.Add($dummy)
-                
-                $childNode.Add_Expanded({
-                    param($s, $e)
-                    if ($e.Source -eq $s) { Expand-FolderNode -Node $s }
-                })
-            }
-
-            $childNode.Add_Selected({
-                param($s, $e)
-                if ($e.Source -eq $s) {
-                    $txtSelectedPath.Text = [string]$s.Tag
-                }
-            })
-
-            [void]$Node.Items.Add($childNode)
-        }
-
-        # Add Files sorted descending by size
+        # Add Files sorted descending by size immediately
         $fileEntries | Sort-Object Bytes -Descending | ForEach-Object {
             $fileNode = New-Object System.Windows.Controls.TreeViewItem
             $fileNode.Header = New-TreeNodeHeader -Name $_.Name -Bytes $_.Bytes -ParentBytes $parentSize -IsFolder $false
@@ -610,6 +563,65 @@ function Expand-FolderNode {
             [void]$Node.Items.Add($fileNode)
         }
 
+        # Add Subdirectories immediately with initial Calculating status
+        $dirNodes = @()
+        foreach ($sd in $subdirs) {
+            $dName = [System.IO.Path]::GetFileName($sd)
+            if ($dName -in @("System Volume Information", "`$RECYCLE.BIN")) {
+                continue
+            }
+
+            $childNode = New-Object System.Windows.Controls.TreeViewItem
+            $childNode.Header = New-TreeNodeHeader -Name $dName -Bytes -1 -ParentBytes $parentSize -IsFolder $true
+            $childNode.Tag = $sd
+            $childNode.ToolTip = 0
+
+            # Add dummy child for lazy subfolder expansion
+            $dummy = New-Object System.Windows.Controls.TreeViewItem
+            $dummy.Header = "Loading..."
+            $dummy.Tag = "__DUMMY__"
+            [void]$childNode.Items.Add($dummy)
+            
+            $childNode.Add_Expanded({
+                param($s, $e)
+                if ($e.Source -eq $s) { Expand-FolderNode -Node $s }
+            })
+
+            $childNode.Add_Selected({
+                param($s, $e)
+                if ($e.Source -eq $s) {
+                    $txtSelectedPath.Text = [string]$s.Tag
+                }
+            })
+
+            [void]$Node.Items.Add($childNode)
+            $dirNodes += $childNode
+        }
+
+        # Render all discovered folders and files instantly in the UI
+        $txtTreeScanStatus.Text = ("Discovered {0} folders and {1} files. Calculating sizes..." -f $dirNodes.Count, $fileEntries.Count)
+        Do-WpfEvents
+
+        # 2. Progressively compute directory sizes
+        foreach ($dn in $dirNodes) {
+            $sPath = [string]$dn.Tag
+            $sName = [System.IO.Path]::GetFileName($sPath)
+            $txtTreeScanStatus.Text = "Calculating size for $sName..."
+            Do-WpfEvents
+
+            $dBytes = Get-FolderSizeFast $sPath
+            $dn.ToolTip = $dBytes
+            $dn.Header = New-TreeNodeHeader -Name $sName -Bytes $dBytes -ParentBytes $parentSize -IsFolder $true
+            Do-WpfEvents
+        }
+
+        # 3. Sort subdirectories and files descending by size once calculated
+        $sortedItems = @($Node.Items) | Sort-Object ToolTip -Descending
+        $Node.Items.Clear()
+        foreach ($item in $sortedItems) {
+            [void]$Node.Items.Add($item)
+        }
+
         $txtTreeScanStatus.Text = "Ready"
         Do-WpfEvents
     }
@@ -619,10 +631,13 @@ function Expand-FolderNode {
 function Load-DriveTelemetry {
     param([string]$DriveLetter = "C:\")
 
-    if (-not $DriveLetter.EndsWith("\")) { $DriveLetter += "\" }
+    # Robust drive letter sanitization
+    $cleanLetter = $DriveLetter.Trim().Trim('"').Trim("'").TrimEnd('\').TrimEnd(':')
+    if ([string]::IsNullOrWhiteSpace($cleanLetter)) { $cleanLetter = "C" }
+    $DriveLetter = "$($cleanLetter):\"
     $script:currentDriveRoot = $DriveLetter
 
-    $cleanDrive = $DriveLetter.TrimEnd("\")
+    $cleanDrive = "$($cleanLetter):"
     $driveObj = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DeviceID -eq $cleanDrive }
     if (-not $driveObj) {
         $driveObj = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -eq 3 } | Select-Object -First 1
@@ -685,8 +700,9 @@ function Scan-LargestFiles {
     $txtDriveSubtitle.Text = "Scanning drive for files >= 50 MB using native index..."
     Do-WpfEvents
 
-    $cleanRoot = $DrivePath
-    if (-not $cleanRoot.EndsWith("\")) { $cleanRoot += "\" }
+    $cleanLetter = $DrivePath.Trim().Trim('"').Trim("'").TrimEnd('\').TrimEnd(':')
+    if ([string]::IsNullOrWhiteSpace($cleanLetter)) { $cleanLetter = "C" }
+    $cleanRoot = "$($cleanLetter):\"
 
     # Query files >= 50MB (52428800 bytes)
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
@@ -798,6 +814,15 @@ $btnRescanDrive.Add_Click({
     Load-DriveTelemetry -DriveLetter $script:currentDriveRoot
 })
 
+$tabMain.Add_SelectionChanged({
+    param($s, $e)
+    if ($e.Source -eq $s) {
+        if ($tabMain.SelectedIndex -eq 1 -and $script:allLargestFiles.Count -eq 0) {
+            Scan-LargestFiles -DrivePath $script:currentDriveRoot
+        }
+    }
+})
+
 # Populate Drives Dropdown
 $drives = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -eq 3 }
 foreach ($d in $drives) {
@@ -817,7 +842,9 @@ $comboDrives.Add_SelectionChanged({
     }
 })
 
-# Initial Load
-Load-DriveTelemetry -DriveLetter $InitialPath
+# Initial Load when window is visible
+$window.Add_ContentRendered({
+    Load-DriveTelemetry -DriveLetter $InitialPath
+})
 
 $window.ShowDialog() | Out-Null
