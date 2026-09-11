@@ -10,33 +10,33 @@
 
 ---
 
-## ⚡ Key Highlights
+## Key Highlights
 
-- **🎯 0–100% PC Health Score & Trend Tracking**: An intelligent composite score weighted across Drive Health & Space (35%), Stability & Blue Screens (25%), Battery & Power (20%), and CPU/RAM Load (20%). Automatically saves scan history to `%LOCALAPPDATA%\HardwareSentinel\history.json` and tracks performance deltas over time (e.g. `+5% vs prior scan`).
-- **🚀 One-Click System Utilities Toolbar**: Direct shortcuts to native Windows diagnostic and maintenance tools:
+- ** 0–100% PC Health Score & Trend Tracking**: An intelligent composite score weighted across Drive Health & Space (35%), Stability & Blue Screens (25%), Battery & Power (20%), and CPU/RAM Load (20%). Automatically saves scan history to `%LOCALAPPDATA%\HardwareSentinel\history.json` and tracks performance deltas over time (e.g. `+5% vs prior scan`).
+- ** One-Click System Utilities Toolbar**: Direct shortcuts to native Windows diagnostic and maintenance tools:
   - **Stability Timeline**: One-click launcher for Windows Reliability Monitor (`perfmon /rel`).
   - **Storage Cleanup**: Instant access to Windows Storage Sense (`ms-settings:storagesense`) and Disk Cleanup (`cleanmgr.exe`).
   - **Resource Monitor & Task Manager**: Direct shortcuts to `resmon.exe` and `taskmgr.exe`.
-- **🧠 Hardware Specs & Upgrade Intelligence**:
+- ** Hardware Specs & Upgrade Intelligence**:
   - **RAM Upgradability**: Inspects physical memory modules and motherboard slots (e.g. `2 of 4 slots used @ 3200 MHz`), helping users determine whether they can easily upgrade their RAM.
   - **GPU & Display Adapter**: Surfaces dedicated/integrated graphics model, VRAM in GB, and flags outdated drivers (>12 months).
   - **Drive Media Types**: Clear badging for high-speed **NVMe SSD**, standard **SATA SSD**, and mechanical **HDD**.
-- **🛡️ Security & Windows Baseline Audit**:
+- ** Security & Windows Baseline Audit**:
   - **BitLocker Drive Encryption**: Reports whether the system drive is Encrypted (Protected) or Unencrypted.
   - **Pending Reboot Detection**: Detects if Windows updates or servicing operations are awaiting a restart.
   - **TPM 2.0 & Secure Boot**: Inspects hardware security module and UEFI Secure Boot readiness.
 - **🌲 Interactive Disk Space Visualizer**: Click into the Storage section to launch an interactive, hierarchical disk visualizer with folder tree search/filtering, size percentage bars, a **Largest Files Finder** (files >= 50MB), and a native **"Move to Recycle Bin"** action (with standard Windows confirmation modal).
-- **🔋 Intelligent Power & Battery Diagnostics**: Queries full OEM battery reports using native Windows telemetry (`powercfg.exe /batteryreport /xml`). Calculates design vs. full capacity degradation wear %, lifetime cycle count, and estimates remaining battery health. *Gracefully detects desktop PCs on wall power without score penalties.*
-- **💥 Crash & BlueScreen History**: Reads minidumps (`C:\Windows\Minidump`) and Windows Event Log system events (BugCheck 1001 and Kernel-Power 41). Automatically translates cryptic NTSTATUS / HEX stop codes into plain English explanations (e.g. `CRITICAL_PROCESS_DIED`, `PAGE_FAULT_IN_NONPAGED_AREA`).
-- **🖥️ Dual Mode (GUI + CLI)**:
+- ** Intelligent Power & Battery Diagnostics**: Queries full OEM battery reports using native Windows telemetry (`powercfg.exe /batteryreport /xml`). Calculates design vs. full capacity degradation wear %, lifetime cycle count, and estimates remaining battery health. *Gracefully detects desktop PCs on wall power without score penalties.*
+- ** Crash & BlueScreen History**: Reads minidumps (`C:\Windows\Minidump`) and Windows Event Log system events (BugCheck 1001 and Kernel-Power 41). Automatically translates cryptic NTSTATUS / HEX stop codes into plain English explanations (e.g. `CRITICAL_PROCESS_DIED`, `PAGE_FAULT_IN_NONPAGED_AREA`).
+- ** Dual Mode (GUI + CLI)**:
   - **Modern Dark WPF Dashboard**: Sleek, slate-dark UI (`#0B0F19`) featuring circular gauge animations, status chips, real-time scanning progress, and instant copy/save actions.
   - **Headless CLI / Scriptable Engine**: Return clean PowerShell objects (`[PSCustomObject]`) or JSON directly to stdout for RMM scripts, automation, and scheduled checks.
-- **📄 Standalone HTML Report**: Generate a branded, self-contained HTML report with CSS styling that can be emailed to clients or attached to support tickets.
-- **📦 Zero External Dependencies**: 100% native PowerShell 5.1+ and .NET Framework 4.8. No Python, node, or third-party DLLs required.
+- ** Standalone HTML Report**: Generate a branded, self-contained HTML report with CSS styling that can be emailed to clients or attached to support tickets.
+- ** Zero External Dependencies**: 100% native PowerShell 5.1+ and .NET Framework 4.8. No Python, node, or third-party DLLs required.
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Option 1: Run the Modern Dashboard (GUI)
 Simply double-click **`HardwareSentinel.exe`** for an instant, zero-console launch with high-DPI scaling:
@@ -72,7 +72,7 @@ Write-Host "PC Health Score: $($Report.HealthScore)%" -ForegroundColor Green
 
 ---
 
-## 📊 Health Score Breakdown
+##  Health Score Breakdown
 
 | Weight | Diagnostic Module | What It Checks |
 | :--- | :--- | :--- |
@@ -88,7 +88,7 @@ Write-Host "PC Health Score: $($Report.HealthScore)%" -ForegroundColor Green
 
 ---
 
-## 🛠️ System Requirements
+##  System Requirements
 
 - **Operating System**: Windows 10, Windows 11, or Windows Server 2016+
 - **PowerShell**: Windows PowerShell 5.1 or PowerShell 7+
@@ -96,7 +96,7 @@ Write-Host "PC Health Score: $($Report.HealthScore)%" -ForegroundColor Green
 
 ---
 
-## 📄 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
