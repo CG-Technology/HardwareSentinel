@@ -135,11 +135,12 @@ function Do-WpfEvents {
             <StackPanel Grid.Column="0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Background="#1E1B4B" BorderBrush="#4F46E5" BorderThickness="1" CornerRadius="6" Width="32" Height="32" Margin="0,0,10,0">
-                        <TextBlock Text="🛡️" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <!-- Native Vector Shield Icon -->
+                        <Path Data="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" Fill="#818CF8" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <TextBlock Text="Hardware Sentinel" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
                     <Border Background="#065F46" CornerRadius="10" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="v1.0.0" FontSize="11" FontWeight="Bold" Foreground="#34D399"/>
+                        <TextBlock Text="v1.0.1" FontSize="11" FontWeight="Bold" Foreground="#34D399"/>
                     </Border>
                 </StackPanel>
                 <TextBlock x:Name="TxtMachineSubtitle" Text="Computer: Checking... | OS: Windows" FontSize="12" Foreground="#94A3B8" Margin="42,4,0,0"/>
@@ -147,9 +148,9 @@ function Do-WpfEvents {
 
             <!-- Top Action Buttons -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button x:Name="BtnRefresh" Style="{StaticResource ActionButton}" Content="🔄 Rescan" Margin="0,0,8,0"/>
-                <Button x:Name="BtnSaveReport" Style="{StaticResource PrimaryButton}" Content="📄 Save Report (.html)" Margin="0,0,8,0"/>
-                <Button x:Name="BtnCopySummary" Style="{StaticResource ActionButton}" Content="📋 Copy Summary"/>
+                <Button x:Name="BtnRefresh" Style="{StaticResource ActionButton}" Content="Rescan" Margin="0,0,8,0"/>
+                <Button x:Name="BtnSaveReport" Style="{StaticResource PrimaryButton}" Content="Save Report (.html)" Margin="0,0,8,0"/>
+                <Button x:Name="BtnCopySummary" Style="{StaticResource ActionButton}" Content="Copy Summary"/>
             </StackPanel>
         </Grid>
 
@@ -192,7 +193,6 @@ function Do-WpfEvents {
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0" Margin="0,0,0,6">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="TxtScanIcon" Text="⚡" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock x:Name="TxtScanStep" Text="Initializing diagnostic probes..." FontSize="12" FontWeight="SemiBold" Foreground="#38BDF8"/>
                     </StackPanel>
                     <TextBlock x:Name="TxtScanPercent" Text="0%" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" HorizontalAlignment="Right"/>
@@ -221,7 +221,7 @@ function Do-WpfEvents {
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="💽" FontSize="16" Margin="0,0,6,0"/>
+                        <Path Data="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm2 4h12V6H6v4zm0 4h12v-2H6v2zm0 4h6v-2H6v2z" Fill="#38BDF8" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Storage &amp; Drive Health" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
                     </StackPanel>
                     <StackPanel Grid.Row="1">
@@ -240,7 +240,7 @@ function Do-WpfEvents {
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="🔋" FontSize="16" Margin="0,0,6,0"/>
+                        <Path Data="M17 6h-2V5c0-.55-.45-1-1-1h-4c-.55 0-1 .45-1 1v1H7c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z" Fill="#10B981" Width="13" Height="13" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Battery &amp; Power Health" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
                     </StackPanel>
                     <StackPanel Grid.Row="1">
@@ -259,7 +259,7 @@ function Do-WpfEvents {
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="🧠" FontSize="16" Margin="0,0,6,0"/>
+                        <Path Data="M9 3L5 6.99h3V14H3v-3L0 15l3 4v-3h6v6h-3l4 4 4-4h-3v-6h5v3l3-4-3-4v3h-5V6.99h3L9 3z" Fill="#818CF8" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Processor &amp; Memory" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
                     </StackPanel>
                     <StackPanel Grid.Row="1">
@@ -279,7 +279,7 @@ function Do-WpfEvents {
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="💥" FontSize="16" Margin="0,0,6,0"/>
+                        <Path Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" Fill="#F87171" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Stability &amp; Crash History" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
                     </StackPanel>
                     <StackPanel Grid.Row="1">
@@ -314,7 +314,6 @@ $txtTopObservations = $window.FindName("TxtTopObservations")
 
 # Progress Bar Elements
 $borderScanProgress  = $window.FindName("BorderScanProgress")
-$txtScanIcon         = $window.FindName("TxtScanIcon")
 $txtScanStep         = $window.FindName("TxtScanStep")
 $txtScanPercent      = $window.FindName("TxtScanPercent")
 $progressScanOverall = $window.FindName("ProgressScanOverall")
@@ -353,7 +352,6 @@ function Invoke-DiagnosticsScan {
     $borderScanProgress.Visibility  = [System.Windows.Visibility]::Visible
     $progressScanOverall.Value      = 5
     $progressScanOverall.Foreground = $bc.ConvertFromString("#38BDF8")
-    $txtScanIcon.Text               = "⚡"
     $txtScanStep.Text               = "Initializing diagnostic probes..."
     $txtScanStep.Foreground         = $bc.ConvertFromString("#38BDF8")
     $txtScanPercent.Text            = "5%"
@@ -476,7 +474,7 @@ function Invoke-DiagnosticsScan {
         $txtCrashDetails.Foreground = $bc.ConvertFromString("#10B981")
     } else {
         $txtCrashSummary.Text = "$($stability.CrashEvents.Count) Crash Event(s) Detected in Last 30 Days"
-        $details = ($stability.CrashEvents | ForEach-Object { "• $($_.Timestamp): $($_.Cause)" }) -join "`n"
+        $details = ($stability.CrashEvents | ForEach-Object { "- $($_.Timestamp): $($_.Cause)" }) -join "`n"
         $txtCrashDetails.Text = $details
         $txtCrashDetails.Foreground = $bc.ConvertFromString("#F87171")
     }
@@ -521,7 +519,7 @@ function Invoke-DiagnosticsScan {
 
     if ($health.Observations.Count -eq 0) {
         $txtScoreSummary.Text = "Your computer hardware and operating system are in top condition with zero errors detected."
-        $txtTopObservations.Text = "✓ Storage healthy   ✓ Memory available   ✓ Zero blue screen crashes"
+        $txtTopObservations.Text = "[OK] Storage healthy   |   [OK] Memory available   |   [OK] Zero blue screen crashes"
         $txtTopObservations.Foreground = $bc.ConvertFromString("#10B981")
     } else {
         $txtScoreSummary.Text = "The diagnostic scan completed. $($health.Observations.Count) item(s) recommended for review:"
@@ -532,7 +530,6 @@ function Invoke-DiagnosticsScan {
     # Finalize Progress Bar
     $progressScanOverall.Value      = 100
     $progressScanOverall.Foreground = $bc.ConvertFromString("#10B981")
-    $txtScanIcon.Text               = "✓"
     $txtScanStep.Text               = "Diagnostic scan complete"
     $txtScanStep.Foreground         = $bc.ConvertFromString("#10B981")
     $txtScanPercent.Text            = "100%"
