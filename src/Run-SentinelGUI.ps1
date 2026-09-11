@@ -18,6 +18,9 @@ Add-Type -AssemblyName WindowsBase
 Add-Type -AssemblyName System.Windows.Forms
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+if (-not $scriptDir) {
+    $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { "c:\Users\VMUser\Documents\antigravity\HardwareSentinel\src" }
+}
 $engineScript = Join-Path $scriptDir "HardwareSentinel.ps1"
 
 # WPF Message Pump to keep UI interactive and smoothly animated
@@ -375,6 +378,13 @@ function Do-WpfEvents {
 
 $reader = New-Object System.Xml.XmlNodeReader $xaml
 $window = [Windows.Markup.XamlReader]::Load($reader)
+
+$iconPath = Join-Path (Split-Path -Parent $scriptDir) "HardwareSentinel.ico"
+if (Test-Path $iconPath) {
+    try {
+        $window.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object System.Uri($iconPath, [System.UriKind]::Absolute)))
+    } catch {}
+}
 
 # Element References
 $txtMachineSubtitle = $window.FindName("TxtMachineSubtitle")

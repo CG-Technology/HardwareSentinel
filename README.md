@@ -39,7 +39,11 @@
 ## 🚀 Getting Started
 
 ### Option 1: Run the Modern Dashboard (GUI)
-Simply double-click or run from PowerShell:
+Simply double-click **`HardwareSentinel.exe`** for an instant, zero-console launch with high-DPI scaling:
+```powershell
+.\HardwareSentinel.exe
+```
+Alternatively, launch via the PowerShell launcher script:
 ```powershell
 .\Run-Sentinel.ps1
 ```

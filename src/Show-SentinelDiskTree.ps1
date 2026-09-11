@@ -495,6 +495,14 @@ function Get-FolderSizeFast {
 $reader = New-Object System.Xml.XmlNodeReader $xaml
 $window = [Windows.Markup.XamlReader]::Load($reader)
 
+$baseFolder = if ($PSScriptRoot) { Split-Path -Parent $PSScriptRoot } else { "c:\Users\VMUser\Documents\antigravity\HardwareSentinel" }
+$iconPath = Join-Path $baseFolder "HardwareSentinel.ico"
+if (Test-Path $iconPath) {
+    try {
+        $window.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object System.Uri($iconPath, [System.UriKind]::Absolute)))
+    } catch {}
+}
+
 # Control References
 $comboDrives           = $window.FindName("ComboDrives")
 $btnRescanDrive        = $window.FindName("BtnRescanDrive")
